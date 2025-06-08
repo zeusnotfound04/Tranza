@@ -27,7 +27,7 @@ func (cc *CardController) LinkCard(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	card.UserId = userID
 
-	if err := cc.Service.LinkCard(&card); err != nil {
+	if err := cc.Service.LinkCard(c ,&card); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to link card"})
 		return
 	}
@@ -38,7 +38,7 @@ func (cc *CardController) LinkCard(c *gin.Context) {
 func (cc *CardController) GetCards(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	cards, err := cc.Service.GetCards(userID)
+	cards, err := cc.Service.GetCards(c , userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch cards"})
 		return
@@ -51,7 +51,7 @@ func (cc *CardController) DeleteCard(c *gin.Context) {
 	cardID, _ := strconv.Atoi(c.Param("id"))
 	userID := c.GetUint("user_id")
 
-	err := cc.Service.DeleteCard(uint(cardID), userID)
+	err := cc.Service.DeleteCard(c , uint(cardID), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete card"})
 		return
@@ -72,7 +72,7 @@ func (cc *CardController) UpdateLimit(c *gin.Context) {
 		return
 	}
 
-	err := cc.Service.UpdateCardLimit(uint(cardID), userID, payload.Limit)
+	err := cc.Service.UpdateCardLimit(c , uint(cardID), userID, payload.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update limit"})
 		return
