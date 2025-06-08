@@ -12,6 +12,13 @@ import (
 
 var DB *gorm.DB
 
+type RazorpayConfig struct {
+	RazorpayKeyID     string
+	RazorpayKeySecret string
+	WebhookSecret     string
+	Environment       string // "test" or "live"
+}
+
 func LoadEnv(){
 	err := godotenv.Load()
 
@@ -54,4 +61,42 @@ func CloseDB (db *gorm.DB){
 	}
 
 	sqlDB.Close()
+}
+func LoadConfig() *RazorpayConfig {
+	keyID := os.Getenv("RAZORPAY_KEY_ID")
+	keySecret := os.Getenv("RAZORPAY_KEY_SECRET")
+	webhookSecret := os.Getenv("RAZORPAY_WEBHOOK_SECRET")
+	
+	if keyID == "" || keySecret == "" {
+		log.Fatal("RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set")
+	}
+	
+	env := os.Getenv("RAZORPAY_ENV")
+	if env == "" {
+		env = "test"
+	}
+	
+	return &RazorpayConfig{
+		RazorpayKeyID:     keyID,
+		RazorpayKeySecret: keySecret,
+		WebhookSecret:     webhookSecret,
+		Environment:       env,
+	}
+}
+
+func (c *RazorpayConfig) GetBaseURL() string {
+	return "https://api.razorpay.com/v1"
+}
+
+func (c *RazorpayConfig) IsProduction() bool {
+	return c.Environment == "live"
+}
+func (c *RazorpayConfig) Validate() error {
+	if c.RazorpayKeyID == "" {
+		return fmt.Errorf("RAZORPAY_KEY_ID is required")
+	}
+	if c.RazorpayKeySecret == "" {
+		return fmt.Errorf("RAZORPAY_KEY_SECRET is required")
+	}
+	return nil
 }
