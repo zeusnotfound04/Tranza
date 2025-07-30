@@ -1,15 +1,38 @@
 package utils
 
 import (
-	"os"
-	"time"
-    "crypto/hmac"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/zeusnotfound04/Tranza/models"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// JWTService interface for JWT operations
+type JWTService interface {
+	GenerateAccessToken(user *models.User) (string, error)
+	GenerateRefreshToken(user *models.User) (string, error)
+	ValidateToken(tokenString string) (jwt.MapClaims, error)
+	ValidateRefreshToken(tokenString string) (jwt.MapClaims, error)
+}
+
+// jwtService implements JWTService interface
+type jwtService struct {
+	secretKey []byte
+}
+
+// NewJWTService creates a new JWT service instance
+func NewJWTService(secretKey string) JWTService {
+	return &jwtService{
+		secretKey: []byte(secretKey),
+	}
+}
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
@@ -25,11 +48,75 @@ func GenerateJWT(userId, email, username string) (string, error) {
 		"exp":      time.Now().Add(48 * time.Hour).Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
 }
 
+// JWTService implementation methods
+func (j *jwtService) GenerateAccessToken(user *models.User) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":  float64(user.ID),
+		"email":    user.Email,
+		"username": user.Username,
+		"exp":      time.Now().Add(1 * time.Hour).Unix(),
+		"type":     "access",
+	}
 
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(j.secretKey)
+}
+
+func (j *jwtService) GenerateRefreshToken(user *models.User) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": float64(user.ID),
+		"exp":     time.Now().Add(24 * 7 * time.Hour).Unix(), // 7 days
+		"type":    "refresh",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(j.secretKey)
+}
+
+func (j *jwtService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return j.secretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, fmt.Errorf("invalid token")
+}
+
+func (j *jwtService) ValidateRefreshToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return j.secretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		if tokenType, exists := claims["type"]; exists && tokenType == "refresh" {
+			return claims, nil
+		}
+		return nil, fmt.Errorf("invalid token type")
+	}
+
+	return nil, fmt.Errorf("invalid refresh token")
+}
 
 // ComputeHMACSHA256 computes HMAC-SHA256 signature for the given message and secret
 func ComputeHMACSHA256(message, secret string) string {
@@ -44,13 +131,13 @@ func VerifyRazorpaySignature(orderID, paymentID, signature, secret string) bool 
 	if orderID == "" || paymentID == "" || signature == "" || secret == "" {
 		return false
 	}
-	
+
 	// Create the message string as per Razorpay documentation
 	message := fmt.Sprintf("%s|%s", orderID, paymentID)
-	
+
 	// Compute expected signature
 	expectedSignature := ComputeHMACSHA256(message, secret)
-	
+
 	// Use constant time comparison to prevent timing attacks
 	return hmac.Equal([]byte(expectedSignature), []byte(signature))
 }
@@ -61,10 +148,10 @@ func VerifyWebhookSignature(body, signature, secret string) bool {
 	if body == "" || signature == "" || secret == "" {
 		return false
 	}
-	
+
 	// Compute expected signature using the webhook body
 	expectedSignature := ComputeHMACSHA256(body, secret)
-	
+
 	// Use constant time comparison to prevent timing attacks
 	return hmac.Equal([]byte(expectedSignature), []byte(signature))
 }
@@ -75,13 +162,13 @@ func VerifyRefundSignature(refundID, paymentID, signature, secret string) bool {
 	if refundID == "" || paymentID == "" || signature == "" || secret == "" {
 		return false
 	}
-	
+
 	// Create the message string for refund verification
 	message := fmt.Sprintf("%s|%s", paymentID, refundID)
-	
+
 	// Compute expected signature
 	expectedSignature := ComputeHMACSHA256(message, secret)
-	
+
 	// Use constant time comparison to prevent timing attacks
 	return hmac.Equal([]byte(expectedSignature), []byte(signature))
 }
@@ -92,14 +179,14 @@ func ValidateSignatureFormat(signature string) bool {
 	if len(signature) != 64 {
 		return false
 	}
-	
+
 	// Check if it contains only valid hex characters
 	for _, char := range signature {
 		if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -117,12 +204,12 @@ func ValidateOrderID(orderID string) bool {
 	if !strings.HasPrefix(orderID, "order_") {
 		return false
 	}
-	
+
 	// Check minimum length (order_ + at least 10 characters)
 	if len(orderID) < 16 {
 		return false
 	}
-	
+
 	// Check if it contains only valid characters after "order_"
 	idPart := orderID[6:] // Remove "order_" prefix
 	for _, char := range idPart {
@@ -130,7 +217,7 @@ func ValidateOrderID(orderID string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -140,12 +227,12 @@ func ValidatePaymentID(paymentID string) bool {
 	if !strings.HasPrefix(paymentID, "pay_") {
 		return false
 	}
-	
+
 	// Check minimum length (pay_ + at least 10 characters)
 	if len(paymentID) < 14 {
 		return false
 	}
-	
+
 	// Check if it contains only valid characters after "pay_"
 	idPart := paymentID[4:] // Remove "pay_" prefix
 	for _, char := range idPart {
@@ -153,7 +240,7 @@ func ValidatePaymentID(paymentID string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -163,18 +250,18 @@ func ValidateAmount(amount float64) bool {
 	if amount <= 0 {
 		return false
 	}
-	
+
 	// Amount should not be unreasonably large (100 crores in rupees)
 	if amount > 1000000000 {
 		return false
 	}
-	
+
 	// Amount should have at most 2 decimal places
 	multiplied := amount * 100
 	if multiplied != float64(int(multiplied)) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -191,7 +278,7 @@ func ValidateCurrency(currency string) bool {
 		"AED": true,
 		"MYR": true,
 	}
-	
+
 	return supportedCurrencies[strings.ToUpper(currency)]
 }
 
@@ -213,15 +300,30 @@ func GenerateSecureReceipt(prefix string) string {
 // ValidateWebhookEvent checks if the webhook event is valid
 func ValidateWebhookEvent(event string) bool {
 	validEvents := map[string]bool{
-		"payment.authorized": true,
-		"payment.captured":   true,
-		"payment.failed":     true,
-		"order.paid":         true,
-		"refund.created":     true,
-		"refund.processed":   true,
-		"refund.failed":      true,
+		"payment.authorized":   true,
+		"payment.captured":     true,
+		"payment.failed":       true,
+		"order.paid":           true,
+		"refund.created":       true,
+		"refund.processed":     true,
+		"refund.failed":        true,
 		"settlement.processed": true,
 	}
-	
+
 	return validEvents[event]
+}
+
+// HashPassword hashes a password using bcrypt
+func HashPassword(password string) (string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedPassword), nil
+}
+
+// VerifyPassword verifies a password against its hash using bcrypt
+func VerifyPassword(password, hashedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return err == nil
 }
