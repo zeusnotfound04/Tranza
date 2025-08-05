@@ -1,9 +1,13 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
+	ID         uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	Email      string    `gorm:"unique;not null" json:"email"`
 	Username   string    `gorm:"unique;not null" json:"username"`
 	Password   string    `json:"-"` // Never expose password
@@ -13,6 +17,8 @@ type User struct {
 	IsActive   bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+
+	// Relations will be loaded separately to avoid circular dependencies
 }
 
 type AuthResponse struct {
