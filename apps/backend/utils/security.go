@@ -55,7 +55,7 @@ func GenerateJWT(userId, email, username string) (string, error) {
 // JWTService implementation methods
 func (j *jwtService) GenerateAccessToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id":  float64(user.ID),
+		"user_id":  user.ID.String(),
 		"email":    user.Email,
 		"username": user.Username,
 		"exp":      time.Now().Add(1 * time.Hour).Unix(),
@@ -68,7 +68,7 @@ func (j *jwtService) GenerateAccessToken(user *models.User) (string, error) {
 
 func (j *jwtService) GenerateRefreshToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": float64(user.ID),
+		"user_id": user.ID.String(),
 		"exp":     time.Now().Add(24 * 7 * time.Hour).Unix(), // 7 days
 		"type":    "refresh",
 	}
@@ -244,26 +244,7 @@ func ValidatePaymentID(paymentID string) bool {
 	return true
 }
 
-// ValidateAmount checks if the amount is valid (positive and reasonable)
-func ValidateAmount(amount float64) bool {
-	// Amount should be positive
-	if amount <= 0 {
-		return false
-	}
 
-	// Amount should not be unreasonably large (100 crores in rupees)
-	if amount > 1000000000 {
-		return false
-	}
-
-	// Amount should have at most 2 decimal places
-	multiplied := amount * 100
-	if multiplied != float64(int(multiplied)) {
-		return false
-	}
-
-	return true
-}
 
 // ValidateCurrency checks if the currency code is supported
 func ValidateCurrency(currency string) bool {
