@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models"
 	"gorm.io/gorm"
 )
@@ -12,7 +13,7 @@ var db *gorm.DB
 // UserRepository interface defines the contract for user data operations
 type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
-	FindByID(ctx context.Context, id uint) (*models.User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	FindByProviderID(ctx context.Context, provider, providerID string) (*models.User, error)
 	Create(ctx context.Context, user *models.User) error
 }
@@ -54,7 +55,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
-func (r *userRepository) FindByID(ctx context.Context, id uint) (*models.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var user models.User
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, err
