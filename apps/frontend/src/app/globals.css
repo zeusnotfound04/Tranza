@@ -5,6 +5,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Dynamic TOC Variables */
+  --d-bg: 0 0% 100%;
+  --d-muted: 0 0% 90%;
+  --d-fg: 0 0% 0%;
+  --d-border: 0 0% 90%;
+  --d-sheet: 0 0% 98%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,4 +25,17 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Dynamic TOC Utilities */
+.dot-bg {
+  background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+}
+
+.outline-hidden {
+  outline: none !important;
 }
