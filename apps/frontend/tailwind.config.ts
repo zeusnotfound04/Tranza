@@ -11,6 +11,12 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Dynamic TOC Colors (adapted for standard Tailwind)
+        'd-bg': 'hsl(var(--d-bg))',
+        'd-fg': 'hsl(var(--d-fg))',
+        'd-border': 'hsl(var(--d-border))',
+        'd-sheet': 'hsl(var(--d-sheet))',
+        'd-muted': 'hsl(var(--d-muted))',
       },
     },
   },
