@@ -1,17 +1,81 @@
 package main
 
 import (
+	"log"
+	"os"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/zeusnotfound04/Tranza/config"
+	"github.com/zeusnotfound04/Tranza/models"
 	"github.com/zeusnotfound04/Tranza/routes"
 )
 
 func main() {
+	// Load environment variables
 	config.LoadEnv()
+
+	// Connect to database
 	db := config.ConnectDB()
 	defer config.CloseDB(db)
 
+	// Auto-migrate models
+	err := db.AutoMigrate(
+		&models.User{},
+		&models.EmailVerification{},
+		&models.Transaction{},
+		&models.APIKey{},
+		&models.LinkedCard{},
+		&models.Wallet{},
+		&models.AIPaymentRequest{},
+		&models.AISpendingLimit{},
+		&models.AISpendingTracker{},
+	)
+	if err != nil {
+		log.Fatal("Failed to migrate database:", err)
+	}
+
+	// Initialize Gin router
 	router := gin.Default()
-	routes.SetupRoutes(router , db)
-	router.Run(":8080")
+
+	// Configure CORS for HttpOnly cookies
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{
+		os.Getenv("FRONTEND_URL"), // e.g., "http://localhost:3000"
+		"http://localhost:3000",   // fallback for development
+		"http://localhost:3001",   // docs app
+	}
+	corsConfig.AllowCredentials = true
+	corsConfig.AllowHeaders = []string{
+		"Origin",
+		"Content-Length",
+		"Content-Type",
+		"Authorization",
+		"X-API-Key",
+		"X-Requested-With",
+	}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
+	router.Use(cors.New(corsConfig))
+
+	// Add request logging middleware
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	// Setup all routes using the comprehensive routes system
+	routes.SetupRoutes(router, db)
+
+	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("🚀 Tranza API Server starting on port %s", port)
+	log.Printf("📚 API Documentation: http://localhost:%s/ping", port)
+	log.Printf("🔐 Auth endpoints: http://localhost:%s/auth/*", port)
+	log.Printf("📊 API endpoints: http://localhost:%s/api/v1/*", port)
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatal("Failed to start server:", err)
+	}
 }
