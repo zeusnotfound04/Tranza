@@ -41,6 +41,20 @@ func NewWalletService(
 	}
 }
 
+// Create wallet for user
+func (s *WalletService) CreateWallet(userID uuid.UUID) (*models.Wallet, error) {
+	wallet := &models.Wallet{
+		UserID: userID,
+	}
+
+	createdWallet, err := s.walletRepo.Create(wallet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create wallet: %v", err)
+	}
+
+	return createdWallet, nil
+}
+
 // Get wallet by user ID
 func (s *WalletService) GetWalletByUserID(userID string) (*models.Wallet, error) {
 	uid, err := uuid.Parse(userID)
@@ -76,7 +90,10 @@ func (s *WalletService) CreateLoadMoneyOrder(userID string, amount decimal.Decim
 
 	// Create Razorpay order
 	amountInPaise := amount.Mul(decimal.NewFromInt(100)).IntPart()
-	order, err := s.razorpayClient.CreateOrder(amountInPaise, "INR", fmt.Sprintf("wallet_load_%s_%d", userID, time.Now().Unix()))
+	// Create shorter receipt (≤40 chars for Razorpay) using first 8 chars of userID
+	shortUserID := userID[:8]
+	receipt := fmt.Sprintf("wl_%s_%d", shortUserID, time.Now().Unix())
+	order, err := s.razorpayClient.CreateOrder(amountInPaise, "INR", receipt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Razorpay order: %v", err)
 	}
@@ -104,6 +121,7 @@ func (s *WalletService) CreateLoadMoneyOrder(userID string, amount decimal.Decim
 		Amount:        amount,
 		Currency:      "INR",
 		TransactionID: createdTxn.ID.String(),
+		RazorpayKeyID: s.razorpayClient.KeyID,
 	}, nil
 }
 

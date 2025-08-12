@@ -3,23 +3,27 @@ package services
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models"
 	"github.com/zeusnotfound04/Tranza/repositories"
 	"github.com/zeusnotfound04/Tranza/utils"
 )
 
 type AuthService struct {
-	userRepo     repositories.UserRepository
-	jwtService   utils.JWTService
-	oauthService OAuthService
+	userRepo      repositories.UserRepository
+	jwtService    utils.JWTService
+	oauthService  OAuthService
+	walletService *WalletService
 }
 
-func NewAuthService(userRepo repositories.UserRepository, jwtService utils.JWTService, oauthService OAuthService) *AuthService {
+func NewAuthService(userRepo repositories.UserRepository, jwtService utils.JWTService, oauthService OAuthService, walletService *WalletService) *AuthService {
 	return &AuthService{
-		userRepo:     userRepo,
-		jwtService:   jwtService,
-		oauthService: oauthService,
+		userRepo:      userRepo,
+		jwtService:    jwtService,
+		oauthService:  oauthService,
+		walletService: walletService,
 	}
 }
 
@@ -48,11 +52,14 @@ func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) 
 	}
 
 	user := &models.User{
-		Email:    req.Email,
-		Username: req.Username,
-		Password: hashedPassword,
-		Provider: "local",
-		IsActive: true,
+		ID:        uuid.New(),
+		Email:     req.Email,
+		Username:  req.Username,
+		Password:  hashedPassword,
+		Provider:  "local",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -60,6 +67,10 @@ func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) 
 	}
 
 	return s.generateAuthResponse(ctx, user)
+}
+
+func (s *AuthService) GetAuthURL(provider, state string) (string, error) {
+	return s.oauthService.GetAuthURL(provider, state, "")
 }
 
 func (s *AuthService) HandleOAuthCallback(ctx context.Context, req models.OAuthCallbackRequest) (*models.AuthResponse, error) {
@@ -73,16 +84,29 @@ func (s *AuthService) HandleOAuthCallback(ctx context.Context, req models.OAuthC
 	user, err := s.userRepo.FindByProviderID(ctx, req.Provider, oauthUser.ID)
 	if err != nil {
 		user = &models.User{
+			ID:         uuid.New(),
 			Email:      oauthUser.Email,
 			Username:   s.generateUsername(oauthUser.Name, oauthUser.Email),
 			Avatar:     oauthUser.Avatar,
 			Provider:   req.Provider,
 			ProviderID: oauthUser.ID,
 			IsActive:   true,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
 		}
 
 		if err := s.userRepo.Create(ctx, user); err != nil {
 			return nil, err
+		}
+
+		// Automatically create wallet for new user
+		if s.walletService != nil {
+			_, walletErr := s.walletService.CreateWallet(user.ID)
+			if walletErr != nil {
+				// Log the error but don't fail the auth process
+				// In production, you might want to use a proper logger
+				// log.Printf("Failed to create wallet for user %s: %v", user.ID, walletErr)
+			}
 		}
 	}
 
@@ -95,12 +119,17 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*models.
 		return nil, err
 	}
 
-	userID, ok := claims["user_id"].(float64)
+	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
 		return nil, errors.New("invalid token")
 	}
 
-	return s.userRepo.FindByID(ctx, uint(userID))
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, errors.New("invalid user ID format")
+	}
+
+	return s.userRepo.FindByID(ctx, userID)
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*models.AuthResponse, error) {
@@ -109,12 +138,17 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, err
 	}
 
-	userID, ok := claims["user_id"].(float64)
+	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
 		return nil, errors.New("invalid refresh token")
 	}
 
-	user, err := s.userRepo.FindByID(ctx, uint(userID))
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, errors.New("invalid user ID format")
+	}
+
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
