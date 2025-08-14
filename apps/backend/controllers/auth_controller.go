@@ -243,24 +243,36 @@ func (ac *AuthController) ValidateTokenHandler(ctx *gin.Context) {
 // AuthMiddleware provides JWT authentication middleware
 func (ac *AuthController) AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		fmt.Printf("DEBUG: AuthMiddleware called for path: %s\n", ctx.Request.URL.Path)
+		fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
+		fmt.Printf("DEBUG: All cookies: %+v\n", ctx.Request.Cookies())
+		
 		token := ac.getTokenFromCookie(ctx)
+		fmt.Printf("DEBUG: Token from cookie: %s\n", token)
+		
 		if token == "" {
+			fmt.Printf("DEBUG: No token found in cookies\n")
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			ctx.Abort()
 			return
 		}
 
+		fmt.Printf("DEBUG: Validating token...\n")
 		user, err := ac.authService.ValidateToken(ctx.Request.Context(), token)
 		if err != nil {
+			fmt.Printf("DEBUG: Token validation failed: %v\n", err)
 			ac.clearAuthCookies(ctx)
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			ctx.Abort()
 			return
 		}
 
+		fmt.Printf("DEBUG: Token validation successful. User: %+v\n", user)
 		// Store user in context for use in subsequent handlers
 		ctx.Set("user", user)
 		ctx.Set("user_id", user.ID)
+		ctx.Set("userID", user.ID.String()) // Add this for wallet controller compatibility
+		fmt.Printf("DEBUG: Set userID in context: %s\n", user.ID.String())
 		ctx.Next()
 	}
 }

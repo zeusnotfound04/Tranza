@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -56,6 +57,16 @@ func main() {
 	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
 	router.Use(cors.New(corsConfig))
+
+	// Add custom debug middleware to log all requests
+	router.Use(func(c *gin.Context) {
+		fmt.Printf("🔍 DEBUG: %s %s | Headers: %v | Cookies: %v\n", 
+			c.Request.Method, 
+			c.Request.URL.Path, 
+			c.Request.Header.Get("Authorization"), 
+			c.Request.Header.Get("Cookie"))
+		c.Next()
+	})
 
 	// Add request logging middleware
 	router.Use(gin.Logger())

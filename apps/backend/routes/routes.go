@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	apiKeyController := controllers.NewAPIKeyController(apiKeyService)
 	aiController := controllers.NewAIController(aiService, walletService, paymentService)
 
+	fmt.Printf("DEBUG: All controllers initialized successfully\n")
+	fmt.Printf("DEBUG: Wallet controller: %+v\n", walletController)
+
 	// ======================
 	// Public Routes (No Auth Required)
 	// ======================
@@ -102,6 +106,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// ======================
 	api := r.Group("/api/v1")
 	api.Use(authController.AuthMiddleware()) // Apply JWT auth to all API routes
+	fmt.Printf("DEBUG: Setting up API v1 routes with auth middleware\n")
 
 	// ======================
 	// User Profile Routes
@@ -128,10 +133,12 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// ======================
 	wallet := api.Group("/wallet")
 	{
+		fmt.Printf("DEBUG: Registering wallet routes\n")
 		wallet.GET("", walletController.GetWallet)                     // Get wallet details
 		wallet.PUT("/settings", walletController.UpdateWalletSettings) // Update wallet settings
 		wallet.POST("/load", walletController.CreateLoadMoneyOrder)    // Create load money order
 		wallet.POST("/verify-payment", walletController.VerifyPayment) // Verify payment and credit wallet
+		fmt.Printf("DEBUG: Wallet routes registered successfully\n")
 	}
 
 	// ======================
@@ -150,6 +157,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// ======================
 	transactions := api.Group("/transactions")
 	{
+		fmt.Printf("DEBUG: Registering transaction routes\n")
 		// Basic transaction operations
 		transactions.GET("", transactionController.GetTransactionHistory)             // Get transaction history with pagination
 		transactions.GET("/:id", transactionController.GetTransaction)                // Get specific transaction
@@ -168,6 +176,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 		transactions.GET("/export", transactionController.ExportTransactions)         // Export transactions
 		transactions.POST("/:id/validate", transactionController.ValidateTransaction) // Validate transaction (admin)
 		transactions.POST("/:id/retry", transactionController.RetryFailedTransaction) // Retry failed transaction
+		fmt.Printf("DEBUG: Transaction routes registered successfully\n")
 	}
 
 	// ======================

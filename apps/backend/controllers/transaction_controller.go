@@ -30,8 +30,16 @@ func NewTransactionController(
 
 // GetTransactionHistory retrieves paginated transaction history with filters
 func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
+	fmt.Printf("DEBUG: GetTransactionHistory endpoint called\n")
+	fmt.Printf("DEBUG: Request URL: %s\n", ctx.Request.URL.String())
+	fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
+	fmt.Printf("DEBUG: Request headers: %+v\n", ctx.Request.Header)
+	
 	userID := ctx.GetString("userID") // From JWT middleware
+	fmt.Printf("DEBUG: UserID from context: %s\n", userID)
+	
 	if userID == "" {
+		fmt.Printf("DEBUG: UserID is empty - authentication failed\n")
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
 	}
@@ -39,12 +47,15 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 	// Parse query parameters
 	var req dto.TransactionHistoryRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
+		fmt.Printf("DEBUG: Query parameter binding error: %v\n", err)
 		utils.ValidationErrorResponse(ctx, map[string]string{
 			"error": "Invalid query parameters",
 		})
 		return
 	}
 
+	fmt.Printf("DEBUG: Parsed request: %+v\n", req)
+	
 	// Set defaults
 	if req.Page < 1 {
 		req.Page = 1
