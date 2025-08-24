@@ -22,41 +22,42 @@ type ExternalOrder struct {
 	PaymentStatus   string          `json:"payment_status" gorm:"default:'pending'"`
 	TransactionID   string          `json:"transaction_id,omitempty"`
 	TrackingNumber  string          `json:"tracking_number,omitempty"`
-	
-	// Delivery details  
-	DeliveryAddress Address         `json:"delivery_address" gorm:"embedded;embeddedPrefix:delivery_"`
-	EstimatedDelivery *time.Time    `json:"estimated_delivery,omitempty"`
-	DeliveredAt     *time.Time      `json:"delivered_at,omitempty"`
-	
+
+	// Delivery details
+	DeliveryAddress   Address    `json:"delivery_address" gorm:"embedded;embeddedPrefix:delivery_"`
+	EstimatedDelivery *time.Time `json:"estimated_delivery,omitempty"`
+	DeliveredAt       *time.Time `json:"delivered_at,omitempty"`
+
 	// Order items from external website
-	Items           []ExternalOrderItem `json:"items" gorm:"serializer:json"`
-	
+	Items []ExternalOrderItem `json:"items" gorm:"serializer:json"`
+
 	// AI-related fields
-	IsAIOrder       bool            `json:"is_ai_order" gorm:"default:true"`
-	AIPrompt        string          `json:"ai_prompt,omitempty" gorm:"type:text"`
-	AIRequestID     string          `json:"ai_request_id,omitempty"`
-	
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
+	IsAIOrder   bool   `json:"is_ai_order" gorm:"default:true"`
+	AIPrompt    string `json:"ai_prompt,omitempty" gorm:"type:text"`
+	AIRequestID string `json:"ai_request_id,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relations
-	User        User         `json:"-" gorm:"foreignKey:UserID"`
+	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
 // ExternalOrderItem represents items purchased from external websites
 type ExternalOrderItem struct {
-	ProductID   string          `json:"product_id"`   // External product ID
-	Name        string          `json:"name"`
-	Brand       string          `json:"brand"`
-	Category    string          `json:"category"`
-	Size        string          `json:"size"`
-	Color       string          `json:"color"`
-	Quantity    int             `json:"quantity"`
-	Price       decimal.Decimal `json:"price"`
-	ImageURL    string          `json:"image_url"`
-	ProductURL  string          `json:"product_url"`  // Link to external product page
-	Website     string          `json:"website"`      // Source website
+	ProductID  string          `json:"product_id"` // External product ID
+	Name       string          `json:"name"`
+	Brand      string          `json:"brand"`
+	Category   string          `json:"category"`
+	Size       string          `json:"size"`
+	Color      string          `json:"color"`
+	Quantity   int             `json:"quantity"`
+	Price      decimal.Decimal `json:"price"`
+	ImageURL   string          `json:"image_url"`
+	ProductURL string          `json:"product_url"` // Link to external product page
+	Website    string          `json:"website"`     // Source website
 }
+
 // DTO Types for API requests/responses
 
 type AIClothingOrderRequest struct {
@@ -81,23 +82,23 @@ type AIClothingOrderResponse struct {
 }
 
 type ProductSuggestion struct {
-	Product     ProductResponse `json:"product"`
-	Variant     VariantResponse `json:"variant"`
-	Quantity    int             `json:"quantity"`
-	Reason      string          `json:"reason"`
-	Price       decimal.Decimal `json:"price"`
+	Product  ProductResponse `json:"product"`
+	Variant  VariantResponse `json:"variant"`
+	Quantity int             `json:"quantity"`
+	Reason   string          `json:"reason"`
+	Price    decimal.Decimal `json:"price"`
 }
 
 type ProductResponse struct {
-	ID          string          `json:"id"`
-	Name        string          `json:"name"`
-	Brand       string          `json:"brand"`
-	Category    string          `json:"category"`
-	Price       decimal.Decimal `json:"price"`
-	ImageURL    string          `json:"image_url"`
-	Rating      float64         `json:"rating"`
-	Website     string          `json:"website"`
-	URL         string          `json:"url"`
+	ID       string          `json:"id"`
+	Name     string          `json:"name"`
+	Brand    string          `json:"brand"`
+	Category string          `json:"category"`
+	Price    decimal.Decimal `json:"price"`
+	ImageURL string          `json:"image_url"`
+	Rating   float64         `json:"rating"`
+	Website  string          `json:"website"`
+	URL      string          `json:"url"`
 }
 
 type VariantResponse struct {
@@ -114,13 +115,13 @@ type ClothingOrderConfirmationRequest struct {
 
 // Additional DTOs for external API integration
 type ClothingOrderAnalysis struct {
-	Category  string  `json:"category"`
-	Size      string  `json:"size"`
-	Color     string  `json:"color"`
-	Brand     string  `json:"brand"`
-	Occasion  string  `json:"occasion"`
-	MinPrice  float64 `json:"min_price"`
-	MaxPrice  float64 `json:"max_price"`
+	Category string  `json:"category"`
+	Size     string  `json:"size"`
+	Color    string  `json:"color"`
+	Brand    string  `json:"brand"`
+	Occasion string  `json:"occasion"`
+	MinPrice float64 `json:"min_price"`
+	MaxPrice float64 `json:"max_price"`
 }
 
 type SuggestedProduct struct {
@@ -184,8 +185,8 @@ func (eo *ExternalOrder) BeforeCreate(tx *gorm.DB) (err error) {
 		eo.ID = uuid.New()
 	}
 	if eo.OrderNumber == "" {
-		eo.OrderNumber = fmt.Sprintf("TRZ%s%06d", 
-			time.Now().Format("20060102"), 
+		eo.OrderNumber = fmt.Sprintf("TRZ%s%06d",
+			time.Now().Format("20060102"),
 			time.Now().Unix()%1000000)
 	}
 	if eo.Currency == "" {
