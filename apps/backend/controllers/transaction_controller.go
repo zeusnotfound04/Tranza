@@ -34,10 +34,10 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 	fmt.Printf("DEBUG: Request URL: %s\n", ctx.Request.URL.String())
 	fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
 	fmt.Printf("DEBUG: Request headers: %+v\n", ctx.Request.Header)
-	
+
 	userID := ctx.GetString("userID") // From JWT middleware
 	fmt.Printf("DEBUG: UserID from context: %s\n", userID)
-	
+
 	if userID == "" {
 		fmt.Printf("DEBUG: UserID is empty - authentication failed\n")
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
@@ -55,7 +55,7 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 	}
 
 	fmt.Printf("DEBUG: Parsed request: %+v\n", req)
-	
+
 	// Set defaults
 	if req.Page < 1 {
 		req.Page = 1

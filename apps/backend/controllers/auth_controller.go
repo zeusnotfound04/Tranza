@@ -246,10 +246,10 @@ func (ac *AuthController) AuthMiddleware() gin.HandlerFunc {
 		fmt.Printf("DEBUG: AuthMiddleware called for path: %s\n", ctx.Request.URL.Path)
 		fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
 		fmt.Printf("DEBUG: All cookies: %+v\n", ctx.Request.Cookies())
-		
+
 		token := ac.getTokenFromCookie(ctx)
 		fmt.Printf("DEBUG: Token from cookie: %s\n", token)
-		
+
 		if token == "" {
 			fmt.Printf("DEBUG: No token found in cookies\n")
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})

@@ -26,10 +26,10 @@ func (h *WalletHandler) GetWallet(c *gin.Context) {
 	fmt.Printf("DEBUG: Request headers: %+v\n", c.Request.Header)
 	fmt.Printf("DEBUG: Request URL: %s\n", c.Request.URL.Path)
 	fmt.Printf("DEBUG: Request method: %s\n", c.Request.Method)
-	
+
 	userID := c.GetString("userID") // From JWT middleware
 	fmt.Printf("DEBUG: UserID from JWT middleware: %s\n", userID)
-	
+
 	if userID == "" {
 		fmt.Printf("DEBUG: UserID is empty - JWT middleware may not have set it\n")
 		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
@@ -62,10 +62,10 @@ func (h *WalletHandler) GetWallet(c *gin.Context) {
 // Create order for loading money
 func (h *WalletHandler) CreateLoadMoneyOrder(c *gin.Context) {
 	userID := c.GetString("userID")
-	
+
 	// Debug log
 	fmt.Printf("DEBUG: CreateLoadMoneyOrder called for userID: %s\n", userID)
-	
+
 	var req dto.LoadMoneyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fmt.Printf("DEBUG: JSON binding error: %v\n", err)
