@@ -10,7 +10,7 @@ dotenv.config();
 const requiredEnvVars = {
   SLACK_BOT_TOKEN: process.env['SLACK_BOT_TOKEN'],
   SLACK_SIGNING_SECRET: process.env['SLACK_SIGNING_SECRET'],
-  // SLACK_APP_TOKEN: process.env['SLACK_APP_TOKEN'], // Not needed for HTTP endpoint mode
+
 };
 
 const missingVars = Object.entries(requiredEnvVars)
@@ -27,12 +27,9 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
-// Initialize the app
 const app = new App({
   token: process.env['SLACK_BOT_TOKEN']!,
   signingSecret: process.env['SLACK_SIGNING_SECRET']!,
-  // socketMode: true, // Disabled for ngrok HTTP endpoint usage
-  // appToken: process.env['SLACK_APP_TOKEN']!, // Not needed when socketMode is disabled
   port: parseInt(process.env['PORT'] || '3000'),
 });
 
@@ -45,14 +42,34 @@ initializeSessionManager({
 // Register all commands and actions
 registerCommands(app);
 
+app.use(async ({ body, next }) => {
+  console.log('📨 Incoming Slack request:', {
+    type: (body as any).type || 'unknown',
+    user: (body as any).user?.id || 'unknown',
+    timestamp: new Date().toISOString()
+  });
+  await next();
+});
+
+// Add error handling for unhandled requests
+app.error(async (error) => {
+  console.error('❌ Slack app error:', error);
+});
+
 // Start the app
 const startApp = async (): Promise<void> => {
   try {
     await app.start();
-    console.log('⚡️ Tranza Slack bot is running on the port' , parseInt(process.env['PORT'] || '3000'));
+    const port = parseInt(process.env['PORT'] || '3000');
     console.log('⚡️ Tranza Slack bot is running!');
+    console.log(`🌐 Server running on port: ${port}`);
     console.log(`🔗 API Base URL: ${process.env['TRANZA_API_BASE_URL'] || 'http://localhost:8080'}`);
     console.log('📱 Available commands: /auth, /fetch-balance, /send-money, /logout, /help');
+    console.log('\n🔧 Slack App Configuration URLs:');
+    console.log(`   Event Subscriptions → Request URL: https://your-domain.com/slack/events`);
+    console.log(`   Interactivity & Shortcuts → Request URL: https://your-domain.com/slack/actions`);
+    console.log(`   Slash Commands → Request URL: https://your-domain.com/slack/commands`);
+    console.log('\n📝 Replace "your-domain.com" with your actual ngrok or server domain');
   } catch (error) {
     console.error('❌ Error starting app:', error);
     process.exit(1);

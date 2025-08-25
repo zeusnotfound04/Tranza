@@ -58,7 +58,8 @@ export const handleFetchBalanceCommand = async ({ command, ack, respond }: Slack
     });
 
     const balance = await getWalletBalance(client);
-    
+    console.log('Wallet balance fetched successfully:', balance);
+
     await respond({
       text: `💰 *Wallet Balance*\n${balance.message}`,
     });
@@ -188,13 +189,19 @@ export const handleSendMoneyCommand = async ({ command, ack, respond }: SlackCom
 
 
 export const handleConfirmTransfer = async ({ ack, body, respond }: SlackActionMiddlewareArgs) => {
+  console.log('🔄 Confirm transfer action received');
+  console.log('Action body:', JSON.stringify(body, null, 2));
+  
   await ack();
 
   try {
     const userId = body.user.id;
+    console.log('👤 User ID:', userId);
+    
     const session = getUserSession(userId);
     
     if (!session) {
+      console.log('❌ No session found for user:', userId);
       await respond({
         text: "❌ Session expired. Please authenticate again with `/auth your-api-key`",
       });
@@ -241,6 +248,7 @@ export const handleConfirmTransfer = async ({ ack, body, respond }: SlackActionM
 
 // Button Action: Cancel Transfer
 export const handleCancelTransfer = async ({ ack, respond }: SlackActionMiddlewareArgs) => {
+  console.log('❌ Cancel transfer action received');
   await ack();
   
   await respond({
@@ -279,7 +287,7 @@ export const handleHelpCommand = async ({ ack, respond }: SlackCommandMiddleware
   const helpText = `🤖 *Tranza Bot Commands*
 
 *Authentication:*
-• \`/auth <api-key>\` - Authenticate with your API key
+• \`/auth <api-key>\` - Authenticate with your universal API key
 • \`/logout\` - Clear your session
 
 *Wallet Operations:*
@@ -292,7 +300,7 @@ export const handleHelpCommand = async ({ ack, respond }: SlackCommandMiddleware
 • \`/help\` - Show this help message
 
 *Getting Started:*
-1. Get your API key from the Tranza dashboard
+1. Get your universal API key from the Tranza web dashboard (one key works for everything!)
 2. Authenticate: \`/auth your-api-key\`
 3. Start using wallet commands!
 
