@@ -18,10 +18,11 @@ import (
 
 // Transaction Types
 const (
-	TransactionTypeLoadMoney  = "load_money"
-	TransactionTypeAIPayment  = "ai_payment"
-	TransactionTypeRefund     = "refund"
-	TransactionTypeWithdrawal = "withdrawal"
+	TransactionTypeLoadMoney        = "load_money"
+	TransactionTypeAIPayment        = "ai_payment"
+	TransactionTypeRefund           = "refund"
+	TransactionTypeWithdrawal       = "withdrawal"
+	TransactionTypeExternalTransfer = "external_transfer"
 )
 
 // Transaction Status
@@ -105,11 +106,11 @@ func LogTransaction(transactionID, userID, transactionType string, amount string
 	InitLogger()
 	Logger.WithFields(logrus.Fields{
 		"transaction_id":   transactionID,
-		"user_id":         userID,
+		"user_id":          userID,
 		"transaction_type": transactionType,
-		"amount":          amount,
-		"status":          status,
-		"timestamp":       time.Now().UTC(),
+		"amount":           amount,
+		"status":           status,
+		"timestamp":        time.Now().UTC(),
 	}).Info("Transaction processed")
 }
 
@@ -117,17 +118,15 @@ func LogAIPayment(transactionID, userID, agentID, merchantName string, amount st
 	InitLogger()
 	Logger.WithFields(logrus.Fields{
 		"transaction_id": transactionID,
-		"user_id":       userID,
-		"agent_id":      agentID,
-		"merchant_name": merchantName,
-		"amount":        amount,
-		"status":        status,
-		"type":          "ai_payment",
-		"timestamp":     time.Now().UTC(),
+		"user_id":        userID,
+		"agent_id":       agentID,
+		"merchant_name":  merchantName,
+		"amount":         amount,
+		"status":         status,
+		"type":           "ai_payment",
+		"timestamp":      time.Now().UTC(),
 	}).Info("AI payment processed")
 }
-
-
 
 // Payment Validation Functions
 func ValidateRazorpayPaymentID(paymentID string) error {
@@ -218,7 +217,6 @@ func GenerateWebhookSignature(body []byte, secret string) string {
 	return generateHMAC(string(body), secret)
 }
 
-
 func generateHMAC(message, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write([]byte(message))
@@ -233,8 +231,6 @@ func RupeesToPaise(rupees decimal.Decimal) int64 {
 func PaiseToRupees(paise int64) decimal.Decimal {
 	return decimal.NewFromInt(paise).Div(decimal.NewFromInt(100))
 }
-
-
 
 // Payment Method Validation
 func ValidatePaymentMethod(method string) error {
@@ -345,11 +341,11 @@ func GetUserFriendlyError(err error) string {
 
 	// Map common errors to user-friendly messages
 	errorMappings := map[string]string{
-		"invalid payment signature":       "Payment verification failed. Please try again.",
-		"payment not captured":            "Payment was not processed successfully. Please try again.",
-		"insufficient balance":            "Insufficient balance in your account.",
+		"invalid payment signature":      "Payment verification failed. Please try again.",
+		"payment not captured":           "Payment was not processed successfully. Please try again.",
+		"insufficient balance":           "Insufficient balance in your account.",
 		"wallet not found":               "Wallet not found. Please contact support.",
-		"transaction already processed":   "This transaction has already been processed.",
+		"transaction already processed":  "This transaction has already been processed.",
 		"amount mismatch":                "Payment amount doesn't match. Please try again.",
 		"invalid order ID format":        "Invalid payment details. Please try again.",
 		"invalid payment ID format":      "Invalid payment details. Please try again.",
@@ -381,11 +377,11 @@ func GetErrorCode(err error) string {
 	errorMessage := err.Error()
 
 	errorCodes := map[string]string{
-		"invalid payment signature":       "PAYMENT_SIGNATURE_INVALID",
-		"payment not captured":            "PAYMENT_NOT_CAPTURED",
-		"insufficient balance":            "INSUFFICIENT_BALANCE",
+		"invalid payment signature":      "PAYMENT_SIGNATURE_INVALID",
+		"payment not captured":           "PAYMENT_NOT_CAPTURED",
+		"insufficient balance":           "INSUFFICIENT_BALANCE",
 		"wallet not found":               "WALLET_NOT_FOUND",
-		"transaction already processed":   "DUPLICATE_TRANSACTION",
+		"transaction already processed":  "DUPLICATE_TRANSACTION",
 		"amount mismatch":                "AMOUNT_MISMATCH",
 		"invalid order ID format":        "INVALID_ORDER_ID",
 		"invalid payment ID format":      "INVALID_PAYMENT_ID",
@@ -431,16 +427,15 @@ func ShouldRetryPayment(err error) bool {
 func GetRetryDelay(attemptNumber int) time.Duration {
 	// Exponential backoff: 1s, 2s, 4s, 8s, 16s
 	delay := time.Duration(1<<attemptNumber) * time.Second
-	
+
 	// Cap at 30 seconds
 	if delay > 30*time.Second {
 		delay = 30 * time.Second
 	}
-	
+
 	return delay
 }
 
 func GetMaxRetryAttempts() int {
 	return 3
 }
-

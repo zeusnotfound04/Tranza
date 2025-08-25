@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"	
+	"github.com/shopspring/decimal"
 )
 
 // ParseUUID safely parses UUID string
@@ -79,7 +79,7 @@ func MaskPhoneNumber(phone string) string {
 	if len(phone) < 4 {
 		return phone
 	}
-	
+
 	masked := strings.Repeat("*", len(phone)-4) + phone[len(phone)-4:]
 	return masked
 }
@@ -151,4 +151,18 @@ func SanitizeString(input string) string {
 	}, input)
 
 	return strings.TrimSpace(sanitized)
+}
+
+// ParseDecimal safely parses string to decimal
+func ParseDecimal(value string) decimal.Decimal {
+	result, err := decimal.NewFromString(value)
+	if err != nil {
+		return decimal.Zero
+	}
+	return result
+}
+
+// GetCurrentTimestamp returns current Unix timestamp
+func GetCurrentTimestamp() int64 {
+	return time.Now().Unix()
 }
