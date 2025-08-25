@@ -26,12 +26,29 @@ class TokenManager {
     }
   }
 
-  static getAccessToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+  static async getAccessToken(): Promise<string | null> {
+    console.log("🔍 [TokenManager] Requesting token from /api/token");
+    
+    const tokenResponse = await fetch("/api/token", {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (tokenResponse.ok) {
+      const tokenData = await tokenResponse.json();
+      console.log("✅ [TokenManager] Token response:", tokenData);
+      console.log("🔑 [TokenManager] Access token:", tokenData.access_token?.substring(0, 20) + "...");
+      return tokenData.access_token;
     }
+
+    console.error("❌ [TokenManager] Failed to retrieve access token, status:", tokenResponse.status);
+    const errorText = await tokenResponse.text();
+    console.error("❌ [TokenManager] Error response:", errorText);
     return null;
   }
+
 
   static getRefreshToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -68,9 +85,12 @@ class APIClient {
     };
 
     // Add Bearer token if available
-    const accessToken = TokenManager.getAccessToken();
+    const accessToken = await TokenManager.getAccessToken();
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
+      console.log("🔑 [lib/api-client] Access token retrieved:", accessToken?.substring(0, 20) + "...");
+    } else {
+      console.warn("⚠️ [lib/api-client] No access token available");
     }
 
     const config: RequestInit = {
@@ -80,9 +100,8 @@ class APIClient {
     };
 
     // Debug logs
-    console.log('DEBUG API Client: Making request to:', url);
-    console.log('DEBUG API Client: Request headers:', headers);
-    console.log('DEBUG API Client: Access token:', accessToken ? 'Present' : 'Missing');
+    console.log('🚀 [lib/api-client] Making request to:', url);
+    console.log('📋 [lib/api-client] Request headers:', headers);
 
     try {
       const response = await fetch(url, config);

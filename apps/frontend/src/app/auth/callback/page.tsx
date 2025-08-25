@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthService } from '@/lib/services';
+import Cookies from 'js-cookie';
+import { apiClient } from '@/services/api';
 
 export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const [processing, setProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +52,44 @@ export default function AuthCallback() {
         }
 
         // Exchange code for tokens
-        await AuthService.handleOAuthCallback({
+        const authResponse = await AuthService.handleOAuthCallback({
           provider: storedProvider,
           code,
           state: state || undefined,
           redirect_uri: `${window.location.origin}/auth/callback`
         });
 
-        // Success - redirect to dashboard
+        // Check if the OAuth callback was successful
+        if (authResponse.data) {
+          const { access_token, user } = authResponse.data;
+          
+          if (access_token && user) {
+            // Set the token using the API endpoint with GET method
+            const tokenResponse = await fetch("/api/token", {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            console.log("Response from /api/token ", tokenResponse);
+            
+            if (tokenResponse.ok) {
+              // Set the token in the API client
+              apiClient.setAuthToken(access_token);
+              
+              // Force a page reload to ensure auth state is properly initialized
+              window.location.href = '/dashboard';
+              return;
+            } else {
+              setError('Failed to retrieve authentication token');
+              setProcessing(false);
+              return;
+            }
+          }
+        }
+
+        // Fallback: redirect to dashboard and let the auth context handle it
         router.push('/dashboard');
         
       } catch (err: any) {
@@ -68,16 +100,16 @@ export default function AuthCallback() {
     };
 
     // Only process if we're not already authenticated
-    if (!isLoading && !user) {
+    if (!loading && !user) {
       handleOAuthCallback();
-    } else if (!isLoading && user) {
+    } else if (!loading && user) {
       // Already authenticated, redirect to dashboard
       router.push('/dashboard');
     }
-  }, [searchParams, router, user, isLoading]);
+  }, [searchParams, router, user, loading]);
 
   // Loading state
-  if (processing || isLoading) {
+  if (processing || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
