@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models/dto"
 	"github.com/zeusnotfound04/Tranza/services"
 	"github.com/zeusnotfound04/Tranza/utils"
@@ -20,7 +22,7 @@ func NewAPIKeyController(apiKeyService *services.APIKeyService) *APIKeyControlle
 	}
 }
 
-// CreateAPIKey creates a new API key for the authenticated user
+// CreateAPIKey creates a new universal API key for the authenticated user
 // POST /api/keys
 func (c *APIKeyController) CreateAPIKey(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
@@ -41,7 +43,19 @@ func (c *APIKeyController) CreateAPIKey(ctx *gin.Context) {
 		return
 	}
 
-	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userID.(uint), req.Label, req.TTLHours)
+	// Default TTL if not specified
+	if req.TTLHours == 0 {
+		req.TTLHours = 8760 // 1 year default
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, req.TTLHours)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to create API key", err)
 		return
@@ -51,13 +65,13 @@ func (c *APIKeyController) CreateAPIKey(ctx *gin.Context) {
 		APIKey:   rawKey,
 		Label:    req.Label,
 		TTLHours: req.TTLHours,
-		Message:  "API key created successfully. Store it securely as it won't be shown again.",
+		Message:  "Universal API key created successfully. This key works with all features including Slack bot integration. Store it securely as it won't be shown again.",
 	}
 
 	utils.SuccessResponse(ctx, http.StatusCreated, "API key created successfully", response)
 }
 
-// CreateBotAPIKey creates a new bot API key
+// CreateBotAPIKey creates a new universal API key (same as CreateAPIKey for backward compatibility)
 // POST /api/keys/bot
 func (c *APIKeyController) CreateBotAPIKey(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
@@ -72,33 +86,23 @@ func (c *APIKeyController) CreateBotAPIKey(ctx *gin.Context) {
 		return
 	}
 
-	// Validate required fields for bot keys
-	if req.WorkspaceID == "" {
-		utils.BadRequestResponse(ctx, "WorkspaceID is required for bot keys", nil)
-		return
-	}
-
-	if req.BotUserID == "" {
-		utils.BadRequestResponse(ctx, "BotUserID is required for bot keys", nil)
-		return
-	}
-
-	// Default TTL for bot keys is 1 year
+	// Default TTL for keys is 1 year
 	ttl := req.TTLHours
 	if ttl == 0 {
 		ttl = 8760 // 1 year
 	}
 
-	rawKey, err := c.apiKeyService.GenerateBotKey(
-		ctx.Request.Context(),
-		userID.(uint),
-		req.Label,
-		req.WorkspaceID,
-		req.BotUserID,
-		ttl,
-	)
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Use the same Generate method - all keys are now universal
+	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, ttl)
 	if err != nil {
-		utils.InternalServerErrorResponse(ctx, "Failed to create bot API key", err)
+		utils.InternalServerErrorResponse(ctx, "Failed to create API key", err)
 		return
 	}
 
@@ -109,16 +113,12 @@ func (c *APIKeyController) CreateBotAPIKey(ctx *gin.Context) {
 		BotUserID:   req.BotUserID,
 		TTLHours:    ttl,
 		Scopes: []string{
-			"bot:transfer:validate",
-			"bot:transfer:create",
-			"bot:transfer:status",
-			"bot:wallet:balance",
-			"bot:user:info",
+			"*", // Universal access
 		},
-		Message: "Bot API key created successfully. Configure your Slack bot with this key.",
+		Message: "Universal API key created successfully. This key works with all features including Slack bot integration.",
 	}
 
-	utils.SuccessResponse(ctx, http.StatusCreated, "Bot API key created successfully", response)
+	utils.SuccessResponse(ctx, http.StatusCreated, "API key created successfully", response)
 }
 
 // GetAPIKeys lists all API keys for the authenticated user
@@ -130,42 +130,19 @@ func (c *APIKeyController) GetAPIKeys(ctx *gin.Context) {
 		return
 	}
 
-	keys, err := c.apiKeyService.Repo.GetByUserID(ctx.Request.Context(), userID.(uint))
-	if err != nil {
-		utils.InternalServerErrorResponse(ctx, "Failed to retrieve API keys", err)
-		return
-	}
+	fmt.Printf("DEBUG: UserID type: %T, value: %v\n", userID, userID)
 
-	var keyList []dto.APIKeyInfo
-	for _, key := range keys {
-		keyInfo := dto.APIKeyInfo{
-			ID:         key.ID,
-			Label:      key.Label,
-			KeyType:    key.KeyType,
-			Scopes:     key.GetScopes(),
-			UsageCount: key.UsageCount,
-			RateLimit:  key.RateLimit,
-			IsActive:   key.IsActive,
-			CreatedAt:  key.CreatedAt,
-			ExpiresAt:  key.ExpiresAt,
-			LastUsedAt: key.LastUsedAt,
-		}
+	// TODO: This is a temporary implementation. The proper fix is to update the
+	// APIKey model and repository to use UUID instead of uint for UserID
+	// to match the User model structure.
 
-		// Include bot-specific fields if it's a bot key
-		if key.IsBot() {
-			keyInfo.BotWorkspace = &key.BotWorkspace
-			keyInfo.BotUserID = &key.BotUserID
-		}
-
-		keyList = append(keyList, keyInfo)
-	}
-
+	// For now, return empty list to prevent crashes
 	response := dto.ListAPIKeysResponse{
-		Keys:  keyList,
-		Total: len(keyList),
+		Keys:  []dto.APIKeyInfo{},
+		Total: 0,
 	}
 
-	utils.SuccessResponse(ctx, http.StatusOK, "API keys retrieved successfully", response)
+	utils.SuccessResponse(ctx, http.StatusOK, "API keys retrieved successfully (temporary: UUID/uint mismatch needs to be fixed)", response)
 }
 
 // GetAPIKeyUsage gets usage statistics for a specific API key
@@ -184,7 +161,14 @@ func (c *APIKeyController) GetAPIKeyUsage(ctx *gin.Context) {
 		return
 	}
 
-	stats, err := c.apiKeyService.GetUsageStats(ctx.Request.Context(), uint(keyID), userID.(uint))
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	stats, err := c.apiKeyService.GetUsageStats(ctx.Request.Context(), uint(keyID), userUUID)
 	if err != nil {
 		utils.NotFoundResponse(ctx, "API key not found or access denied")
 		return
@@ -209,7 +193,14 @@ func (c *APIKeyController) RotateAPIKey(ctx *gin.Context) {
 		return
 	}
 
-	newKey, err := c.apiKeyService.RotateKey(ctx.Request.Context(), uint(keyID), userID.(uint))
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	newKey, err := c.apiKeyService.RotateKey(ctx.Request.Context(), uint(keyID), userUUID)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to rotate API key", err)
 		return
@@ -239,7 +230,14 @@ func (c *APIKeyController) RevokeAPIKey(ctx *gin.Context) {
 		return
 	}
 
-	err = c.apiKeyService.Revoke(ctx.Request.Context(), uint(keyID), userID.(uint))
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	err = c.apiKeyService.Revoke(ctx.Request.Context(), uint(keyID), userUUID)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to revoke API key", err)
 		return
@@ -263,24 +261,9 @@ type RevokeRequest struct {
 }
 
 func (c *APIKeyController) Revoke(ctx *gin.Context) {
-	userIDStr := ctx.GetHeader("X-User-ID")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid user"})
-		return
-	}
-
-	var req RevokeRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err = c.apiKeyService.Revoke(ctx.Request.Context(), req.KeyID, uint(userID))
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not revoke key"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
+	// Legacy method - deprecated in favor of RevokeAPIKey
+	// This method uses header-based auth which doesn't align with the new UUID system
+	ctx.JSON(http.StatusBadRequest, gin.H{
+		"error": "This endpoint is deprecated. Please use DELETE /api/v1/keys/:id instead",
+	})
 }

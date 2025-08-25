@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models/dto"
 	"github.com/zeusnotfound04/Tranza/services"
 	"github.com/zeusnotfound04/Tranza/utils"
@@ -11,11 +13,13 @@ import (
 
 type ExternalTransferController struct {
 	externalTransferService *services.ExternalTransferService
+	walletService           *services.WalletService
 }
 
-func NewExternalTransferController(externalTransferService *services.ExternalTransferService) *ExternalTransferController {
+func NewExternalTransferController(externalTransferService *services.ExternalTransferService, walletService *services.WalletService) *ExternalTransferController {
 	return &ExternalTransferController{
 		externalTransferService: externalTransferService,
+		walletService:           walletService,
 	}
 }
 
@@ -28,13 +32,20 @@ func (c *ExternalTransferController) ValidateTransfer(ctx *gin.Context) {
 		return
 	}
 
+	// Convert userID to string safely
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
 	var req dto.ValidateTransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(ctx, "Invalid request body", err)
 		return
 	}
 
-	response, err := c.externalTransferService.ValidateTransferRequest(userID.(string), &req)
+	response, err := c.externalTransferService.ValidateTransferRequest(userUUID.String(), &req)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to validate transfer", err)
 		return
@@ -52,13 +63,20 @@ func (c *ExternalTransferController) CreateTransfer(ctx *gin.Context) {
 		return
 	}
 
+	// Convert userID to string safely
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
 	var req dto.CreateExternalTransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(ctx, "Invalid request body", err)
 		return
 	}
 
-	response, err := c.externalTransferService.CreateExternalTransfer(userID.(string), &req)
+	response, err := c.externalTransferService.CreateExternalTransfer(userUUID.String(), &req)
 	if err != nil {
 		utils.BadRequestResponse(ctx, "Failed to create transfer", err)
 		return
@@ -94,10 +112,17 @@ func (c *ExternalTransferController) GetUserTransfers(ctx *gin.Context) {
 		return
 	}
 
+	// Convert userID to string safely
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
 	// Get pagination parameters
 	page, limit := utils.GetPaginationParams(ctx)
 
-	response, err := c.externalTransferService.GetExternalTransfersByUser(userID.(string), page, limit)
+	response, err := c.externalTransferService.GetExternalTransfersByUser(userUUID.String(), page, limit)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to retrieve transfers", err)
 		return
@@ -118,6 +143,13 @@ func (c *ExternalTransferController) BotValidateTransfer(ctx *gin.Context) {
 		return
 	}
 
+	// Convert userID to string safely
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
 	var req dto.BotValidateTransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(ctx, "Invalid request body", err)
@@ -131,7 +163,7 @@ func (c *ExternalTransferController) BotValidateTransfer(ctx *gin.Context) {
 		RecipientValue: req.RecipientValue,
 	}
 
-	response, err := c.externalTransferService.ValidateTransferRequest(userID.(string), validateReq)
+	response, err := c.externalTransferService.ValidateTransferRequest(userUUID.String(), validateReq)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to validate transfer", err)
 		return
@@ -159,6 +191,13 @@ func (c *ExternalTransferController) BotCreateTransfer(ctx *gin.Context) {
 		return
 	}
 
+	// Convert userID to string safely
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
 	var req dto.BotCreateTransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		utils.BadRequestResponse(ctx, "Invalid request body", err)
@@ -174,7 +213,7 @@ func (c *ExternalTransferController) BotCreateTransfer(ctx *gin.Context) {
 		Description:    req.Description,
 	}
 
-	response, err := c.externalTransferService.CreateExternalTransfer(userID.(string), transferReq)
+	response, err := c.externalTransferService.CreateExternalTransfer(userUUID.String(), transferReq)
 	if err != nil {
 		utils.BadRequestResponse(ctx, "Failed to create transfer", err)
 		return
@@ -232,11 +271,28 @@ func (c *ExternalTransferController) BotGetWalletBalance(ctx *gin.Context) {
 		return
 	}
 
-	// This should use the wallet service to get balance
-	// For now, we'll create a placeholder response structure
+	// Convert userID to string (it should be UUID)
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Get wallet using wallet service
+	wallet, err := c.walletService.GetWalletByUserID(userUUID.String())
+	if err != nil {
+		utils.NotFoundResponse(ctx, "Wallet not found")
+		return
+	}
+
+	// Create response structure for bot API
 	response := map[string]interface{}{
-		"user_id": userID,
-		"message": "Wallet balance endpoint - needs wallet service integration",
+		"user_id":     userUUID.String(),
+		"balance":     wallet.Balance.String(),
+		"currency":    wallet.Currency,
+		"status":      wallet.Status,
+		"message":     fmt.Sprintf("Current balance: ₹%s", wallet.Balance.String()),
+		"balance_inr": wallet.Balance, // Numeric value for calculations
 	}
 
 	utils.SuccessResponse(ctx, http.StatusOK, "Wallet balance retrieved successfully", response)
