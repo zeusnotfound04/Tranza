@@ -23,7 +23,8 @@ import {
   User,
   Shield,
   Bell,
-  ChevronRight
+  ChevronRight,
+  ShoppingBag
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -58,6 +59,7 @@ const sidebarItems = [
   {
     title: 'AI & Automation',
     items: [
+      { name: 'AI Shopping', href: '/ai-shopping', icon: ShoppingBag },
       { name: 'AI Agents', href: '/ai-agents', icon: Bot },
       { name: 'API Keys', href: '/api-keys', icon: Key },
       { name: 'Integrations', href: '/integrations', icon: Plug },
