@@ -1,265 +1,315 @@
-'use client';
+"use client"
+import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
+import { apiClient, APIResponse } from '../services/api';
+import Cookies from 'js-cookie';
 
-import React, { useState, useEffect, useContext, createContext, ReactNode } from 'react';
-import { AuthService, APIError } from '@/lib/services';
-import { User, LoginRequest, PreRegistrationRequest, EmailVerificationRequest } from '@/types/api';
+interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  verified: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  token: string | null;
+  loading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  logout: () => Promise<void>;
-  preRegister: (data: PreRegistrationRequest) => Promise<{ message: string }>;
-  verifyEmail: (data: EmailVerificationRequest) => Promise<void>;
-  resendVerification: (email: string) => Promise<{ message: string }>;
-  refreshToken: () => Promise<void>;
-  redirectToLogin: (returnUrl?: string) => void;
-  error: string | null;
-  clearError: () => void;
+  login: (email: string, password: string) => Promise<APIResponse<any>>;
+  register: (userData: RegisterData) => Promise<APIResponse<any>>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+  getToken: () => Promise<string | null>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-interface AuthProviderProps {
-  children: ReactNode;
+interface RegisterData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && !!token;
 
-  const clearError = () => setError(null);
-
-  // Check if user is authenticated on mount
+  // Initialize auth state from cookies
   useEffect(() => {
-    checkAuthStatus();
+    const initAuth = async () => {
+      try {
+        const savedToken = Cookies.get('tranza_token');
+        if (savedToken) {
+          setToken(savedToken);
+          apiClient.setAuthToken(savedToken);
+          
+          // Verify token and get user data
+          const response = await apiClient.verifyToken();
+          if (response.success && response.data?.valid && response.data?.user) {
+            setUser(response.data.user);
+          } else {
+            // Try to get user profile directly
+            const profileResponse = await apiClient.getUserProfile();
+            if (profileResponse.success && profileResponse.data) {
+              setUser(profileResponse.data);
+            } else {
+              // Token is invalid, clear it
+              Cookies.remove('tranza_token');
+              setToken(null);
+              apiClient.setAuthToken('');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        Cookies.remove('tranza_token');
+        setToken(null);
+        apiClient.setAuthToken('');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
-  const checkAuthStatus = async () => {
+  const login = async (email: string, password: string): Promise<APIResponse<any>> => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      const response = await AuthService.getCurrentUser();
-      if (response.user) {
-        setUser(response.user);
-      }
-    } catch (error) {
-      if (error instanceof APIError && error.status === 401) {
-        // User is not authenticated, which is fine
-        setUser(null);
-      } else {
-        console.error('Auth check failed:', error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (credentials: LoginRequest) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+      const response = await apiClient.login(email, password);
       
-      const response = await AuthService.login(credentials);
-      if (response.user) {
-        setUser(response.user);
-      } else {
-        throw new Error('Login response missing user data');
+      if (response.success && response.data) {
+        const { token: newToken, user: userData } = response.data;
+        
+        // Save token and user data
+        setToken(newToken);
+        setUser(userData);
+        apiClient.setAuthToken(newToken);
+        
+        // Save token to cookies (expires in 30 days)
+        Cookies.set('tranza_token', newToken, { expires: 30, secure: true, sameSite: 'strict' });
       }
-    } catch (error) {
-      const message = error instanceof APIError ? error.message : 'Login failed';
-      setError(message);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      setIsLoading(true);
-      await AuthService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      setIsLoading(false);
-    }
-  };
-
-  const preRegister = async (data: PreRegistrationRequest) => {
-    try {
-      setError(null);
-      const response = await AuthService.preRegister(data);
-      return { message: response.message || 'Verification code sent successfully' };
-    } catch (error) {
-      const message = error instanceof APIError ? error.message : 'Pre-registration failed';
-      setError(message);
-      throw error;
-    }
-  };
-
-  const verifyEmail = async (data: EmailVerificationRequest) => {
-    try {
-      setIsLoading(true);
-      setError(null);
       
-      const response = await AuthService.verifyEmail(data);
-      if (response.user) {
-        setUser(response.user);
-      } else {
-        throw new Error('Email verification response missing user data');
-      }
+      return response;
     } catch (error) {
-      const message = error instanceof APIError ? error.message : 'Email verification failed';
-      setError(message);
-      throw error;
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: 'Login failed',
+      };
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const resendVerification = async (email: string) => {
+  const register = async (userData: RegisterData): Promise<APIResponse<any>> => {
+    setLoading(true);
     try {
-      setError(null);
-      const response = await AuthService.resendVerification({ email });
-      return { message: response.message || 'Verification code resent successfully' };
-    } catch (error) {
-      const message = error instanceof APIError ? error.message : 'Failed to resend verification code';
-      setError(message);
-      throw error;
-    }
-  };
-
-  const refreshToken = async () => {
-    try {
-      const response = await AuthService.refreshToken();
-      if (response.data?.user) {
-        setUser(response.data.user);
+      const response = await apiClient.register(userData);
+      
+      if (response.success && response.data) {
+        const { token: newToken, user: newUser } = response.data;
+        
+        // Save token and user data
+        setToken(newToken);
+        setUser(newUser);
+        apiClient.setAuthToken(newToken);
+        
+        // Save token to cookies
+        Cookies.set('tranza_token', newToken, { expires: 30, secure: true, sameSite: 'strict' });
       }
+      
+      return response;
     } catch (error) {
-      console.error('Token refresh failed:', error);
-      setUser(null);
-      // Redirect to login if refresh fails
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login';
-      }
-      throw error;
-    }
-  };
-
-  // Auto-refresh token when it's about to expire
-  useEffect(() => {
-    if (!user) return;
-
-    // Set up token refresh interval (refresh every 50 minutes, token expires in 1 hour)
-    const refreshInterval = setInterval(async () => {
-      try {
-        await refreshToken();
-      } catch (error) {
-        console.error('Auto refresh failed:', error);
-        // Will redirect to login in refreshToken function
-      }
-    }, 50 * 60 * 1000); // 50 minutes
-
-    return () => clearInterval(refreshInterval);
-  }, [user]);
-
-  // Handle auth redirects
-  const redirectToLogin = (returnUrl?: string) => {
-    if (typeof window !== 'undefined') {
-      const params = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : '';
-      window.location.href = `/auth/login${params}`;
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      await AuthService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Register error:', error);
+      return {
+        success: false,
+        error: 'Registration failed',
+      };
     } finally {
-      setUser(null);
-      setIsLoading(false);
-      // Clear any stored OAuth state
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('oauth_state');
-        sessionStorage.removeItem('oauth_provider');
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    Cookies.remove('tranza_token');
+    apiClient.setAuthToken('');
+  };
+
+  const refreshUser = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await apiClient.getUserProfile();
+      if (response.success && response.data) {
+        setUser(response.data);
       }
-      redirectToLogin();
+    } catch (error) {
+      console.error('Refresh user error:', error);
+    }
+  };
+
+  const getToken = async (): Promise<string | null> => {
+    try {
+      // First, try to get token from current state
+      if (token) {
+        return token;
+      }
+
+      // If no token in state, try to get from API route
+      const response = await fetch('/api/token', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.token) {
+          // Update the auth state with the retrieved token
+          const retrievedToken = data.data.token;
+          setToken(retrievedToken);
+          apiClient.setAuthToken(retrievedToken);
+          
+          // Try to get user data with this token
+          const userResponse = await apiClient.getUserProfile();
+          if (userResponse.success && userResponse.data) {
+            setUser(userResponse.data);
+          }
+          
+          return retrievedToken;
+        }
+      }
+
+      // If API route fails, try to get from cookies directly
+      const cookieToken = Cookies.get('tranza_token');
+      if (cookieToken) {
+        setToken(cookieToken);
+        apiClient.setAuthToken(cookieToken);
+        return cookieToken;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Get token error:', error);
+      return null;
     }
   };
 
   const value: AuthContextType = {
     user,
-    isLoading,
+    token,
+    loading,
     isAuthenticated,
     login,
-    logout: logout,
-    preRegister,
-    verifyEmail,
-    resendVerification,
-    refreshToken,
-    redirectToLogin,
-    error,
-    clearError,
+    register,
+    logout,
+    refreshUser,
+    getToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
 
-// Higher-order component for protecting routes
-export function withAuth<P extends object>(Component: React.ComponentType<P>) {
-  const AuthenticatedComponent = (props: P) => {
-    const { isAuthenticated, isLoading, redirectToLogin } = useAuth();
+// Hook for wallet-specific operations
+export const useWallet = () => {
+  const { isAuthenticated } = useAuth();
+  const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-      if (!isLoading && !isAuthenticated) {
-        // Get current path for return URL
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
-        redirectToLogin(currentPath);
+  const fetchBalance = async () => {
+    if (!isAuthenticated) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await apiClient.getWalletBalance();
+      if (response.success && response.data) {
+        setBalance(response.data.balance);
+      } else {
+        setError(response.error || 'Failed to fetch balance');
       }
-    }, [isAuthenticated, isLoading, redirectToLogin]);
-
-    if (isLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading...</p>
-          </div>
-        </div>
-      );
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
     }
-
-    if (!isAuthenticated) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">Redirecting to login...</p>
-          </div>
-        </div>
-      );
-    }
-
-    return <Component {...props} />;
   };
 
+  const loadMoney = async (amount: number, method: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await apiClient.loadMoney(amount, method);
+      if (response.success) {
+        await fetchBalance(); // Refresh balance
+      } else {
+        setError(response.error || 'Failed to load money');
+      }
+      return response;
+    } catch (err) {
+      setError('Network error');
+      return { success: false, error: 'Network error' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    balance,
+    loading,
+    error,
+    fetchBalance,
+    loadMoney,
+  };
+};
+
+// Higher-order component for authentication
+export const withAuth = <P extends object>(Component: React.ComponentType<P>) => {
+  const AuthenticatedComponent = (props: P) => {
+    const { user, loading } = useAuth();
+    
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="mt-4 text-lg font-medium text-gray-900">Loading...</h2>
+          </div>
+        </div>
+      );
+    }
+    
+    if (!user) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+      return null;
+    }
+    
+    return <Component {...props} />;
+  };
+  
   AuthenticatedComponent.displayName = `withAuth(${Component.displayName || Component.name})`;
   return AuthenticatedComponent;
-}
+};
 
 export default withAuth;
