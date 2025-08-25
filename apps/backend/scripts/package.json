@@ -1,0 +1,19 @@
+{
+  "name": "tranza-cleanup-scripts",
+  "version": "1.0.0",
+  "description": "Database cleanup scripts for Tranza backend",
+  "main": "cleanup_api_keys.js",
+  "scripts": {
+    "cleanup:api-keys": "node cleanup_api_keys.js",
+    "drop:api-keys-table": "node drop_api_keys_table.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {},
+  "keywords": ["tranza", "cleanup", "database", "api-keys"],
+  "author": "Tranza Team",
+  "license": "MIT"
+}

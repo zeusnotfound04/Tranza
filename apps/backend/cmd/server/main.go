@@ -31,6 +31,7 @@ func main() {
 		&models.AIPaymentRequest{},
 		&models.AISpendingLimit{},
 		&models.AISpendingTracker{},
+		&models.ExternalTransfer{}, // Added missing external transfers table
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
@@ -60,10 +61,10 @@ func main() {
 
 	// Add custom debug middleware to log all requests
 	router.Use(func(c *gin.Context) {
-		fmt.Printf("🔍 DEBUG: %s %s | Headers: %v | Cookies: %v\n", 
-			c.Request.Method, 
-			c.Request.URL.Path, 
-			c.Request.Header.Get("Authorization"), 
+		fmt.Printf("🔍 DEBUG: %s %s | Headers: %v | Cookies: %v\n",
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Request.Header.Get("Authorization"),
 			c.Request.Header.Get("Cookie"))
 		c.Next()
 	})

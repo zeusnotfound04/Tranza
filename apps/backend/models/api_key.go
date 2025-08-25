@@ -3,17 +3,19 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type APIKey struct {
-	ID         uint   `gorm:"primaryKey"`
-	UserID     uint   `gorm:"not null"`
-	KeyHash    string `gorm:"not null;uniqueIndex"`
-	Label      string `gorm:"type:varchar(100)"`
-	Scopes     string `gorm:"type:text"`                       // JSON array of scopes
-	KeyType    string `gorm:"type:varchar(20);default:'user'"` // 'user', 'bot', 'admin'
-	UsageCount int64  `gorm:"default:0"`
-	RateLimit  int    `gorm:"default:1000"` // Requests per hour
+	ID         uint      `gorm:"primaryKey"`
+	UserID     uuid.UUID `json:"user_id" gorm:"type:uuid"`
+	KeyHash    string    `gorm:"not null;uniqueIndex"`
+	Label      string    `gorm:"type:varchar(100)"`
+	Scopes     string    `gorm:"type:text"`                       // JSON array of scopes
+	KeyType    string    `gorm:"type:varchar(20);default:'user'"` // 'user', 'bot', 'admin'
+	UsageCount int64     `gorm:"default:0"`
+	RateLimit  int       `gorm:"default:1000"` // Requests per hour
 	CreatedAt  time.Time
 	ExpiresAt  *time.Time
 	LastUsedAt time.Time
@@ -52,6 +54,10 @@ func (k *APIKey) HasScope(scope string) bool {
 		if s == scope || s == "*" { // "*" means all permissions
 			return true
 		}
+	}
+	// For universal keys, always return true for backward compatibility
+	if k.KeyType == "universal" {
+		return true
 	}
 	return false
 }

@@ -39,8 +39,8 @@ type ExternalTransfer struct {
 	ExchangeRate decimal.Decimal `json:"exchange_rate,omitempty" gorm:"type:decimal(10,6);default:1"`
 
 	// Tracking & Audit
-	ReferenceID   string    `json:"reference_id" gorm:"unique;not null;size:50"`     // Internal tracking
-	TransactionID uuid.UUID `json:"transaction_id,omitempty" gorm:"type:uuid;index"` // Link to main transaction
+	ReferenceID   string     `json:"reference_id" gorm:"unique;not null;size:50"`     // Internal tracking
+	TransactionID *uuid.UUID `json:"transaction_id,omitempty" gorm:"type:uuid;index"` // Link to main transaction
 
 	// Security & Compliance
 	IPAddress   string `json:"ip_address,omitempty" gorm:"size:45"`
