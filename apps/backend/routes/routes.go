@@ -22,6 +22,8 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	txnRepo := repositories.NewTransactionRepository(db)
 	walletRepo := repositories.NewWalletRepository(db)
 	apiKeyRepo := repositories.NewAPIKeyRepository(db)
+	addressRepo := repositories.NewAddressRepository(db)
+	externalTransferRepo := repositories.NewExternalTransferRepository(db)
 
 	// Initialize external clients
 	razorpayClient := razorpay.NewClient(
@@ -45,6 +47,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	razorpayService := services.NewRazorpayService()
 	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
 	aiService := services.NewAIService(db, os.Getenv("GEMINI_API_KEY"))
+	addressService := services.NewAddressService(addressRepo)
+	externalTransferService := services.NewExternalTransferService(db, externalTransferRepo, walletRepo, txnRepo, razorpayClient, notificationService)
+	// clothingService := services.NewClothingService(addressRepo, walletRepo, txnRepo, db)
 
 	// Initialize controllers
 	authController := controllers.NewAuthController(authService, emailVerificationService)
@@ -54,6 +59,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	paymentController := controllers.NewPaymentController(razorpayService)
 	apiKeyController := controllers.NewAPIKeyController(apiKeyService)
 	aiController := controllers.NewAIController(aiService, walletService, paymentService)
+	addressController := controllers.NewAddressController(addressService)
+	externalTransferController := controllers.NewExternalTransferController(externalTransferService, walletService)
+	// clothingController := controllers.NewClothingController(clothingService)
 
 	fmt.Printf("DEBUG: All controllers initialized successfully\n")
 	fmt.Printf("DEBUG: Wallet controller: %+v\n", walletController)
@@ -236,7 +244,75 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 		// AI Spending Limits Management
 		ai.GET("/limits", aiController.GetSpendingLimits)    // Get user's AI spending limits
 		ai.PUT("/limits", aiController.UpdateSpendingLimits) // Update user's AI spending limits
+		
+		// AI Clothing Order Processing
+		// ai.POST("/clothing/order", clothingController.ProcessAIClothingOrder)   // Process AI clothing order request
+		// ai.POST("/clothing/confirm", clothingController.ConfirmAIClothingOrder) // Confirm AI clothing order
 	}
+
+	// ======================
+	// Address Management Routes
+	// ======================
+	addresses := api.Group("/addresses")
+	{
+		addresses.POST("", addressController.CreateAddress)                // Create new address
+		addresses.GET("", addressController.GetAddresses)                  // Get all user addresses
+		addresses.GET("/default", addressController.GetDefaultAddress)     // Get default address
+		addresses.GET("/:id", addressController.GetAddress)                // Get specific address
+		addresses.PUT("/:id", addressController.UpdateAddress)             // Update address
+		addresses.DELETE("/:id", addressController.DeleteAddress)          // Delete address
+		addresses.PUT("/:id/default", addressController.SetDefaultAddress) // Set as default address
+	}
+
+	// ======================
+	// External Transfer Routes (UPI/Phone Transfers)
+	// ======================
+	transfers := api.Group("/transfers")
+	{
+		transfers.POST("/validate", externalTransferController.ValidateTransfer) // Validate transfer before processing
+		transfers.POST("", externalTransferController.CreateTransfer)            // Create new external transfer
+		transfers.GET("", externalTransferController.GetUserTransfers)           // Get user's transfer history
+		transfers.GET("/:id", externalTransferController.GetTransfer)            // Get specific transfer
+		transfers.GET("/fees", externalTransferController.GetTransferFees)       // Get transfer fee structure
+		transfers.GET("/health", externalTransferController.HealthCheck)         // Health check
+	}
+
+	// ======================
+	// API Key Management Routes
+	// ======================
+	keys := api.Group("/keys")
+	{
+		keys.POST("", apiKeyController.CreateAPIKey)            // Create new API key
+		keys.POST("/bot", apiKeyController.CreateBotAPIKey)     // Create bot API key
+		keys.GET("", apiKeyController.GetAPIKeys)               // List all user's API keys
+		keys.GET("/:id/usage", apiKeyController.GetAPIKeyUsage) // Get API key usage stats
+		keys.POST("/:id/rotate", apiKeyController.RotateAPIKey) // Rotate API key
+		keys.DELETE("/:id", apiKeyController.RevokeAPIKey)      // Revoke API key
+	}
+
+	// ======================
+	// Bot-Specific API Routes (Enhanced API Key Authentication)
+	// ======================
+	bot := r.Group("/api/bot")
+	bot.Use(middlewares.BotAPIKeyAuthMiddleware(apiKeyService)) // Enhanced bot API key authentication with rate limiting
+	{
+		// Wallet operations for bots (requires bot:wallet:balance scope)
+		bot.GET("/wallet/balance", externalTransferController.BotGetWalletBalance)
+
+		// Transfer operations for bots (with appropriate scope requirements)
+		bot.POST("/transfers/validate", externalTransferController.BotValidateTransfer)   // Requires bot:transfer:validate
+		bot.POST("/transfers", externalTransferController.BotCreateTransfer)              // Requires bot:transfer:create
+		bot.GET("/transfers/:id/status", externalTransferController.BotGetTransferStatus) // Requires bot:transfer:status
+	}
+
+	// ======================
+	// AI Clothing Shopping - External E-commerce Integration
+	// ======================
+	// Note: This system searches external e-commerce sites and processes payments via Tranza wallet
+
+	// These routes are already defined in the AI group above:
+	// ai.POST("/clothing/order", clothingController.ProcessAIClothingOrder)
+	// ai.POST("/clothing/confirm", clothingController.ConfirmAIClothingOrder)
 
 	// ======================
 	// Admin Routes (Future Implementation)
