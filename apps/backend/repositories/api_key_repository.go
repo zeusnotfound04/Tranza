@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,7 +22,16 @@ func NewAPIKeyRepository(db *gorm.DB) *APIKeyRepository {
 }
 
 func (r *APIKeyRepository) Create(ctx context.Context, key *models.APIKey) error {
-	return r.DB.WithContext(ctx).Create(key).Error
+	fmt.Printf("DEBUG APIKeyRepository.Create: About to create key with UserID %s, Label '%s'\n", key.UserID, key.Label)
+
+	err := r.DB.WithContext(ctx).Create(key).Error
+	if err != nil {
+		fmt.Printf("DEBUG APIKeyRepository.Create: Database error: %v\n", err)
+		return err
+	}
+
+	fmt.Printf("DEBUG APIKeyRepository.Create: Successfully created key with ID %d\n", key.ID)
+	return nil
 }
 
 func (r *APIKeyRepository) FindByHash(ctx context.Context, hash string) (*models.APIKey, error) {
