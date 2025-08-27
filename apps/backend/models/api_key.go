@@ -8,14 +8,22 @@ import (
 )
 
 type APIKey struct {
-	ID         uint      `gorm:"primaryKey"`
-	UserID     uuid.UUID `json:"user_id" gorm:"type:uuid"`
-	KeyHash    string    `gorm:"not null;uniqueIndex"`
-	Label      string    `gorm:"type:varchar(100)"`
-	Scopes     string    `gorm:"type:text"`                       // JSON array of scopes
-	KeyType    string    `gorm:"type:varchar(20);default:'user'"` // 'user', 'bot', 'admin'
-	UsageCount int64     `gorm:"default:0"`
-	RateLimit  int       `gorm:"default:1000"` // Requests per hour
+	ID           uint      `gorm:"primaryKey"`
+	UserID       uuid.UUID `json:"user_id" gorm:"type:uuid"`
+	KeyHash      string    `gorm:"not null;uniqueIndex"`
+	EncryptedKey string    `gorm:"not null"` // Encrypted version of the raw key for viewing
+	PasswordHash string    `gorm:"not null"` // Hash of the password to view the key
+	Label        string    `gorm:"type:varchar(100)"`
+	Scopes       string    `gorm:"type:text"`                       // JSON array of scopes
+	KeyType      string    `gorm:"type:varchar(20);default:'user'"` // 'user', 'bot', 'admin'
+	UsageCount   int64     `gorm:"default:0"`
+	RateLimit    int       `gorm:"default:1000"` // Requests per hour
+
+	// Financial limits
+	SpendingLimit float64 `gorm:"type:decimal(15,2);default:10000"` // Default spending limit
+	SpentAmount   float64 `gorm:"type:decimal(15,2);default:0"`     // Total amount spent via this key
+	Currency      string  `gorm:"type:varchar(10);default:'INR'"`
+
 	CreatedAt  time.Time
 	ExpiresAt  *time.Time
 	LastUsedAt time.Time
@@ -75,6 +83,25 @@ func (k *APIKey) IsBot() bool {
 // CanMakeRequest checks if the key can make requests (not expired, active, etc.)
 func (k *APIKey) CanMakeRequest() bool {
 	return k.IsActive && !k.IsExpired()
+}
+
+// CanSpend checks if the key can spend the given amount
+func (k *APIKey) CanSpend(amount float64) bool {
+	return k.SpentAmount+amount <= k.SpendingLimit
+}
+
+// AddSpentAmount adds to the spent amount
+func (k *APIKey) AddSpentAmount(amount float64) {
+	k.SpentAmount += amount
+}
+
+// GetRemainingSpendingLimit returns the remaining spending limit
+func (k *APIKey) GetRemainingSpendingLimit() float64 {
+	remaining := k.SpendingLimit - k.SpentAmount
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
 }
 
 // IncrementUsage increments the usage counter and updates last used timestamp
