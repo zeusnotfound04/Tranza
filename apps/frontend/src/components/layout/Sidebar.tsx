@@ -61,7 +61,7 @@ const sidebarItems = [
     items: [
       { name: 'AI Shopping', href: '/ai-shopping', icon: ShoppingBag },
       { name: 'AI Agents', href: '/ai-agents', icon: Bot },
-      { name: 'API Keys', href: '/api-keys', icon: Key },
+      { name: 'API Keys', href: '/dashboard/api-keys', icon: Key },
       { name: 'Integrations', href: '/integrations', icon: Plug },
     ]
   },

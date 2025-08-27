@@ -14,7 +14,7 @@ export default function Navigation({ children, showSidebar = true }: NavigationP
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#121212]">
       
       
       <div className="flex">
@@ -28,7 +28,7 @@ export default function Navigation({ children, showSidebar = true }: NavigationP
           {/* Mobile menu button */}
           {showSidebar && (
             <div className="lg:hidden">
-              <div className="flex items-center justify-between h-12 px-4 bg-white border-b border-gray-200">
+              <div className="flex items-center justify-between h-12 px-4 bg-[#121212] border-b border-gray-200">
                 <button
                   type="button"
                   className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
@@ -64,7 +64,7 @@ export default function Navigation({ children, showSidebar = true }: NavigationP
 // Layout wrapper for pages that need sidebar
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Navigation showSidebar={true}>
+    <Navigation  showSidebar={true}>
       {children}
     </Navigation>
   );

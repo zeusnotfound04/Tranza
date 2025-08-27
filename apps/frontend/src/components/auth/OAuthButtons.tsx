@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AuthService } from '@/lib/services';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 
 interface OAuthButtonsProps {

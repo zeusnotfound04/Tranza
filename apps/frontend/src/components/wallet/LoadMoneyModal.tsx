@@ -195,18 +195,19 @@ export default function LoadMoneyModal({ isOpen, onClose, onSuccess }: LoadMoney
   const handlePaymentSuccess = async (paymentResponse: any, orderData: LoadMoneyResponse) => {
     try {
       // Verify payment with backend
-      const verificationResponse = await PaymentService.verifyPayment({
+      const verificationResponse = await WalletService.verifyPayment({
         razorpay_payment_id: paymentResponse.razorpay_payment_id,
         razorpay_order_id: paymentResponse.razorpay_order_id,
         razorpay_signature: paymentResponse.razorpay_signature
       });
       
-      if (verificationResponse.data?.status === 'success') {
+      if (verificationResponse.data?.success) {
         // Payment successful - the amount was already added by the backend
         const amountAdded = parseFloat(amount);
+        const newBalance = verificationResponse.data.new_balance;
         
         setLoading(false);
-        onSuccess?.(amountAdded, 0); // Backend will handle balance update
+        onSuccess?.(amountAdded, newBalance); // Pass the actual new balance
         onClose();
         
         // Reset form

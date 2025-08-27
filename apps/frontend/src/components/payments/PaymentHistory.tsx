@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { TransactionService } from '@/lib/services';
 import { Transaction } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import { BarChart3 } from 'lucide-react';
@@ -184,7 +184,7 @@ export default function PaymentHistory({ limit, showHeader = true }: PaymentHist
           {transactions.map((transaction, index) => (
             <div
               key={`${transaction.id}-${index}`}
-              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-between p-4 bg-black border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { WalletService } from '@/lib/services';
 import { Card } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import { Wallet as WalletIcon, BarChart3, TrendingUp } from 'lucide-react';

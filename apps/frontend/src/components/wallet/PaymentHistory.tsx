@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { TransactionService } from '@/lib/services';
 import { Card } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Input } from '@tranza/ui/components/ui/input';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
@@ -241,12 +241,12 @@ export default function PaymentHistory({ limit, showFilters = true }: PaymentHis
       {/* Transactions List */}
       <Card className="overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-3 bg-gray-50 border-b">
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium text-gray-900">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">
               Payment History
               {totalCount > 0 && (
-                <span className="ml-2 text-sm text-gray-500">
+                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                   ({totalCount} total)
                 </span>
               )}
@@ -258,10 +258,10 @@ export default function PaymentHistory({ limit, showFilters = true }: PaymentHis
         </div>
 
         {/* Transactions */}
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {transactions.length === 0 ? (
             <div className="px-6 py-8 text-center">
-              <p className="text-gray-500">No transactions found</p>
+              <p className="text-gray-500 dark:text-gray-400">No transactions found</p>
               {(typeFilter || statusFilter || searchTerm) && (
                 <Button variant="outline" size="sm" onClick={clearFilters} className="mt-2">
                   Clear filters to see all transactions
@@ -270,20 +270,20 @@ export default function PaymentHistory({ limit, showFilters = true }: PaymentHis
             </div>
           ) : (
             transactions.map((transaction) => (
-              <div key={transaction.id} className="px-6 py-4 hover:bg-gray-50">
+              <div key={transaction.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center w-8 h-8">
                       {getTransactionIcon(transaction.type)}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {formatTransactionType(transaction.type)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {transaction.description || 'No description'}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
                         {new Date(transaction.created_at).toLocaleString()}
                       </p>
                     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Card } from '@tranza/ui/components/ui/card-ui';
 import Link from 'next/link';

@@ -135,7 +135,7 @@ export default function IntegrationTesting() {
 
       {/* Configuration Panel */}
       {showConfig && (
-        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-6">
+        <div className="mb-6 bg-black border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Configuration</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,7 +184,7 @@ export default function IntegrationTesting() {
 
       {/* Overall Results */}
       {allResults && (
-        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-6">
+        <div className="mb-6 bg-black border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Overall Results</h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -227,7 +227,7 @@ export default function IntegrationTesting() {
 
       {/* Running State */}
       {running && !allResults && (
-        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+        <div className="bg-black border border-gray-200 rounded-lg p-8 text-center">
           <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Running Tests</h3>
           <p className="text-gray-600">Please wait while we test your integrations...</p>
@@ -236,7 +236,7 @@ export default function IntegrationTesting() {
 
       {/* Empty State */}
       {!running && !allResults && (
-        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+        <div className="bg-black border border-gray-200 rounded-lg p-8 text-center">
           <Play className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Test</h3>
           <p className="text-gray-600 mb-4">
@@ -273,7 +273,7 @@ function TestSuiteCard({ title, results }: { title: string; results: TestResults
   const successRate = results.total > 0 ? (results.passed / results.total) * 100 : 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg">
+    <div className="bg-black border border-gray-200 rounded-lg">
       <div 
         className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setExpanded(!expanded)}

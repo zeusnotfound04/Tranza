@@ -85,14 +85,14 @@ export default function SlackBotStatus() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Slack Bot Status</CardTitle>
-          <CardDescription>Slack workspace integrations overview</CardDescription>
+          <CardTitle className="text-white">Slack Bot Status</CardTitle>
+          <CardDescription className="text-gray-400">Slack workspace integrations overview</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
           </div>
         </CardContent>
       </Card>
@@ -101,14 +101,14 @@ export default function SlackBotStatus() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Slack Bot Status</CardTitle>
-          <CardDescription>Slack workspace integrations overview</CardDescription>
+          <CardTitle className="text-white">Slack Bot Status</CardTitle>
+          <CardDescription className="text-gray-400">Slack workspace integrations overview</CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="bg-red-900/20 border-red-800">
+            <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
           <Button onClick={loadSlackBotStats} className="mt-4" variant="outline" size="sm">
             Retry
@@ -119,16 +119,16 @@ export default function SlackBotStatus() {
   }
 
   return (
-    <Card className={aeonikPro.className}>
+    <Card className={`${aeonikPro.className} border-gray-800`} style={{ backgroundColor: '#1f1f1f' }}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Slack Bot Status</CardTitle>
-            <CardDescription>Slack workspace integrations overview</CardDescription>
+            <CardTitle className="text-white">Slack Bot Status</CardTitle>
+            <CardDescription className="text-gray-400">Slack workspace integrations overview</CardDescription>
           </div>
           <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-600 font-medium">Connected</span>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-xs text-green-400 font-medium">Connected</span>
           </div>
         </div>
       </CardHeader>
@@ -136,71 +136,71 @@ export default function SlackBotStatus() {
         <div className="space-y-4">
           {/* API Keys Overview */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-xl font-bold text-blue-600">{stats.totalAPIKeys}</div>
-              <div className="text-xs text-blue-700">Total Keys</div>
+            <div className="text-center p-3 bg-blue-900/30 border border-blue-800/50 rounded-lg">
+              <div className="text-xl font-bold text-blue-400">{stats.totalAPIKeys}</div>
+              <div className="text-xs text-blue-300">Total Keys</div>
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-xl font-bold text-green-600">{stats.activeBotKeys}</div>
-              <div className="text-xs text-green-700">Bot Keys</div>
+            <div className="text-center p-3 bg-green-900/30 border border-green-800/50 rounded-lg">
+              <div className="text-xl font-bold text-green-400">{stats.activeBotKeys}</div>
+              <div className="text-xs text-green-300">Bot Keys</div>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-xl font-bold text-purple-600">{stats.universalKeys}</div>
-              <div className="text-xs text-purple-700">Universal</div>
+            <div className="text-center p-3 bg-purple-900/30 border border-purple-800/50 rounded-lg">
+              <div className="text-xl font-bold text-purple-400">{stats.universalKeys}</div>
+              <div className="text-xs text-purple-300">Universal</div>
             </div>
           </div>
 
           {/* Workspace Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">{stats.totalWorkspaces}</div>
-              <div className="text-xs text-orange-700">Workspaces</div>
+            <div className="text-center p-3 bg-orange-900/30 border border-orange-800/50 rounded-lg">
+              <div className="text-xl font-bold text-orange-400">{stats.totalWorkspaces}</div>
+              <div className="text-xs text-orange-300">Workspaces</div>
             </div>
-            <div className="text-center p-3 bg-teal-50 rounded-lg">
-              <div className="text-xl font-bold text-teal-600">{stats.activeWorkspaces}</div>
-              <div className="text-xs text-teal-700">Active</div>
+            <div className="text-center p-3 bg-teal-900/30 border border-teal-800/50 rounded-lg">
+              <div className="text-xl font-bold text-teal-400">{stats.activeWorkspaces}</div>
+              <div className="text-xs text-teal-300">Active</div>
             </div>
           </div>
 
           {/* Transaction Stats */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Today's Bot Transactions:</span>
-              <Badge variant="outline">{stats.todayBotTransactions}</Badge>
+              <span className="text-sm text-gray-400">Today's Bot Transactions:</span>
+              <Badge variant="outline" className="text-white border-gray-600">{stats.todayBotTransactions}</Badge>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Total Bot Transactions:</span>
-              <Badge variant="secondary">{stats.totalBotTransactions}</Badge>
+              <span className="text-sm text-gray-400">Total Bot Transactions:</span>
+              <Badge variant="secondary" className="bg-gray-700 text-gray-200">{stats.totalBotTransactions}</Badge>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Bot Uptime:</span>
-              <Badge variant="outline" className="text-green-600">{stats.botUptime}</Badge>
+              <span className="text-sm text-gray-400">Bot Uptime:</span>
+              <Badge variant="outline" className="text-green-400 border-green-600">{stats.botUptime}</Badge>
             </div>
           </div>
 
           {/* Spending Overview */}
-          <div className="p-3 bg-indigo-50 rounded-lg">
+          <div className="p-3 bg-gray-800/50 border border-gray-700/50 rounded-lg">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-indigo-800">Today's Bot Spending</span>
-              <span className="text-sm font-bold text-indigo-600">
+              <span className="text-sm font-medium text-indigo-300">Today's Bot Spending</span>
+              <span className="text-sm font-bold text-indigo-400">
                 {formatCurrency(stats.todaySpent)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs text-indigo-700">Total Spent via Bots</span>
-              <span className="text-xs font-medium text-indigo-600">
+              <span className="text-xs text-indigo-400">Total Spent via Bots</span>
+              <span className="text-xs font-medium text-indigo-300">
                 {formatCurrency(stats.totalSpent)}
               </span>
             </div>
           </div>
 
           {/* Activity Status */}
-          <div className="p-3 bg-gray-50 rounded-lg">
+          <div className="p-3 bg-gray-800/50 border border-gray-700/50 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Last Bot Activity:</span>
-              <span className="text-xs text-gray-700">
+              <span className="text-sm text-gray-400">Last Bot Activity:</span>
+              <span className="text-xs text-gray-300">
                 {stats.lastActivity ? new Date(stats.lastActivity).toLocaleTimeString() : 'Never'}
               </span>
             </div>
@@ -238,12 +238,12 @@ export default function SlackBotStatus() {
           </div>
 
           {/* Status Indicators */}
-          <div className="pt-2 border-t">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div className="pt-2 border-t border-gray-700">
+            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
               <span>Bot Status:</span>
-              <span className="text-green-600 font-medium">Online</span>
+              <span className="text-green-400 font-medium">Online</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-gray-400">
               <span>Last updated:</span>
               <span>{new Date().toLocaleTimeString()}</span>
             </div>

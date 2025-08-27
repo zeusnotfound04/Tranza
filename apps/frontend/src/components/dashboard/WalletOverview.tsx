@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { WalletService } from '@/lib/services';
 import { Wallet } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import Link from 'next/link';
@@ -51,13 +51,13 @@ export default function WalletOverview() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Wallet Overview</CardTitle>
+          <CardTitle className="text-white">Wallet Overview</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
           </div>
         </CardContent>
       </Card>
@@ -66,13 +66,13 @@ export default function WalletOverview() {
 
   if (error) {
     return (
-      <Card>
+      <Card style={{ backgroundColor: '#1f1f1f' }} className="border-gray-800">
         <CardHeader>
-          <CardTitle>Wallet Overview</CardTitle>
+          <CardTitle className="text-white">Wallet Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="bg-red-900/20 border-red-800">
+            <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
           <Button onClick={loadWalletData} className="mt-4" variant="outline">
             Retry
@@ -95,24 +95,24 @@ export default function WalletOverview() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'active': return 'success';
+      case 'active': return 'default';
       case 'suspended': return 'destructive';
-      case 'pending': return 'warning';
-      default: return 'secondary';
+      case 'pending': return 'secondary';
+      default: return 'outline';
     }
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Main Balance Card */}
-      <Card className="md:col-span-2">
+      <Card className="md:col-span-2 border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className='text-2xl'>Wallet Balance</CardTitle>
-              <CardDescription>Your current available balance</CardDescription>
+              <CardTitle className="text-2xl text-white">Wallet Balance</CardTitle>
+              <CardDescription className="text-gray-400">Your current available balance</CardDescription>
             </div>
-            <Badge variant={getStatusBadgeVariant(wallet?.status || '')}>
+            <Badge variant={getStatusBadgeVariant(wallet?.status || '')} className="text-white">
               {wallet?.status || 'Unknown'}
             </Badge>
           </div>
@@ -133,26 +133,26 @@ export default function WalletOverview() {
       </Card>
 
       {/* Wallet Info */}
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Wallet Information</CardTitle>
-          <CardDescription>Account details and status</CardDescription>
+          <CardTitle className="text-white">Wallet Information</CardTitle>
+          <CardDescription className="text-gray-400">Account details and status</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Currency:</span>
-              <span className="text-sm text-black font-semibold">{wallet?.currency || 'INR'}</span>
+              <span className="text-sm text-gray-400">Currency:</span>
+              <span className="text-sm text-white font-semibold">{wallet?.currency || 'INR'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Status:</span>
-              <Badge variant={getStatusBadgeVariant(wallet?.status || '')}>
+              <span className="text-sm text-gray-400">Status:</span>
+              <Badge variant={getStatusBadgeVariant(wallet?.status || '')} className="text-white">
                 {wallet?.status || 'Unknown'}
               </Badge>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">AI Access:</span>
-              <Badge variant={wallet?.ai_access_enabled ? 'success' : 'secondary'}>
+              <span className="text-sm text-gray-400">AI Access:</span>
+              <Badge variant={wallet?.ai_access_enabled ? 'default' : 'outline'} className="text-white">
                 {wallet?.ai_access_enabled ? 'Enabled' : 'Disabled'}
               </Badge>
             </div>
@@ -168,34 +168,34 @@ export default function WalletOverview() {
       </Card>
 
       {/* AI Agent Limits */}
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>AI Agent Limits</CardTitle>
-          <CardDescription>Automated transaction controls</CardDescription>
+          <CardTitle className="text-white">AI Agent Limits</CardTitle>
+          <CardDescription className="text-gray-400">Automated transaction controls</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Daily Limit:</span>
-                <span className="font-bold text-black ">{formatCurrency(wallet?.ai_daily_limit || 0)}</span>
+                <span className="text-gray-400">Daily Limit:</span>
+                <span className="font-bold text-white">{formatCurrency(wallet?.ai_daily_limit || 0)}</span>
               </div>
             </div>
             
             <div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Per Transaction Limit:</span>
-                <span className="font-bold text-black">{formatCurrency(wallet?.ai_per_transaction_limit || 0)}</span>
+                <span className="text-gray-400">Per Transaction Limit:</span>
+                <span className="font-bold text-white">{formatCurrency(wallet?.ai_per_transaction_limit || 0)}</span>
               </div>
             </div>
             
-            <div className="pt-2 space-y-2">
-              <Link href="/ai-agents">
+            <div className="pt-2 flex space-x-2">
+              <Link href="/ai-agents" className="flex-1">
                 <Button variant="outline" size="sm" className="w-full">
                   Manage AI Agents
                 </Button>
               </Link>
-              <Link href="/api-keys">
+              <Link href="/api-keys" className="flex-1">
                 <Button variant="outline" size="sm" className="w-full">
                   API Keys
                 </Button>

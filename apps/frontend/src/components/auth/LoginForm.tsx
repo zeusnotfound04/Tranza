@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginRequest } from '@/types/auth';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@tranza/ui/components/ui/input';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import { Card } from '@tranza/ui/components/ui/card-ui';
@@ -26,7 +26,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
     clearError();
 
     try {
-      await login(formData);
+      await login(formData.email, formData.password);
       onSuccess?.();
     } catch (error) {
       // Error is handled by the auth context
@@ -42,11 +42,11 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto p-6">
+    <Card className="w-full max-w-md mx-auto p-6 bg-background border-border">
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Sign in to Tranza</h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <h2 className="text-2xl font-bold text-foreground">Sign in to Tranza</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Enter your credentials to access your account
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
               Email address
             </label>
             <Input
@@ -76,7 +76,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
               Password
             </label>
             <Input
@@ -98,15 +98,15 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary focus:ring-primary border-input rounded bg-background"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground">
                 Remember me
               </label>
             </div>
 
             <div className="text-sm">
-              <Link href="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/auth/forgot-password" className="font-medium text-primary hover:text-primary/80">
                 Forgot password?
               </Link>
             </div>
@@ -116,25 +116,19 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
             type="submit"
             disabled={isLoading}
             className="w-full"
+            loading={isLoading}
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Signing in...
-              </div>
-            ) : (
-              'Sign in'
-            )}
+            Sign in
           </Button>
         </form>
 
         {onSwitchToRegister && (
-          <div className="text-center text-sm text-gray-600">
+          <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-primary hover:text-primary/80"
               disabled={isLoading}
             >
               Sign up for free

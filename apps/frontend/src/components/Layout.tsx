@@ -42,13 +42,13 @@ export default function Layout({ children, title }: LayoutProps) {
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-[#121212] bg-opacity-50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#121212] border-r border-gray-200 transform ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out lg:static lg:inset-0`}>
         
@@ -114,7 +114,7 @@ export default function Layout({ children, title }: LayoutProps) {
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top header */}
-        <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-30 bg-[#121212] border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-6">
             <div className="flex items-center gap-4">
               <button

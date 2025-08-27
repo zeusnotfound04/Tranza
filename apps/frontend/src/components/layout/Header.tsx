@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Wallet } from 'lucide-react';
 import { aeonikPro } from '@/lib/fonts';

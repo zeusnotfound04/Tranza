@@ -157,7 +157,7 @@ export default function MoneyTransfer() {
 
       {/* Form Step */}
       {step === 'form' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-black rounded-lg border border-gray-200 p-6">
           <form onSubmit={(e) => { e.preventDefault(); handleValidateTransfer(); }}>
             {/* Amount Input */}
             <div className="mb-6">
@@ -303,7 +303,7 @@ export default function MoneyTransfer() {
 
       {/* Confirmation Step */}
       {step === 'confirm' && validation && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-black rounded-lg border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Confirm Transfer</h2>
           
           <div className="space-y-4 mb-6">
@@ -375,7 +375,7 @@ export default function MoneyTransfer() {
 
       {/* Success Step */}
       {step === 'success' && transferResult && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+        <div className="bg-black rounded-lg border border-gray-200 p-6 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>

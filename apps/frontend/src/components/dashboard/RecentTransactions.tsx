@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { TransactionService } from '@/lib/services';
 import { Transaction } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@tranza/ui/components/ui/badge';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import { TransactionBadge } from '@/components/ui/TransactionBadge';
@@ -61,25 +61,25 @@ export default function RecentTransactions() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed': return 'success';
+      case 'completed': return 'default';
       case 'failed': return 'destructive';
-      case 'pending': return 'warning';
-      default: return 'secondary';
+      case 'pending': return 'secondary';
+      default: return 'outline';
     }
   };
 
   const getTransactionIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'load_money':
-        return <Wallet className="w-5 h-5 text-green-600" />;
+        return <Wallet className="w-5 h-5 text-green-400" />;
       case 'send_money':
-        return <ArrowUpRight className="w-5 h-5 text-blue-600" />;
+        return <ArrowUpRight className="w-5 h-5 text-blue-400" />;
       case 'ai_agent':
-        return <ArrowDownLeft className="w-5 h-5 text-purple-600" />;
+        return <ArrowDownLeft className="w-5 h-5 text-purple-400" />;
       case 'refund':
-        return <ArrowDownLeft className="w-5 h-5 text-orange-600" />;
+        return <ArrowDownLeft className="w-5 h-5 text-orange-400" />;
       default:
-        return <Wallet className="w-5 h-5 text-gray-600" />;
+        return <Wallet className="w-5 h-5 text-gray-400" />;
     }
   };
 
@@ -100,14 +100,14 @@ export default function RecentTransactions() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>Your latest transaction activity</CardDescription>
+          <CardTitle className="text-white">Recent Transactions</CardTitle>
+          <CardDescription className="text-gray-400">Your latest transaction activity</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
           </div>
         </CardContent>
       </Card>
@@ -116,14 +116,14 @@ export default function RecentTransactions() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-gray-800" style={{ backgroundColor: '#1f1f1f' }}>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>Your latest transaction activity</CardDescription>
+          <CardTitle className="text-white">Recent Transactions</CardTitle>
+          <CardDescription className="text-gray-400">Your latest transaction activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="bg-red-900/20 border-red-800">
+            <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
           <Button onClick={loadRecentTransactions} className="mt-4" variant="outline" size="sm">
             Retry
@@ -134,12 +134,12 @@ export default function RecentTransactions() {
   }
 
   return (
-    <Card className={aeonikPro.className}>
+    <Card className={`${aeonikPro.className} border-gray-800`} style={{ backgroundColor: '#1f1f1f' }}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>Your latest transaction activity</CardDescription>
+            <CardTitle className="text-white">Recent Transactions</CardTitle>
+            <CardDescription className="text-gray-400">Your latest transaction activity</CardDescription>
           </div>
           <Link href="/transactions">
             <Button variant="outline" size="sm">View All</Button>
@@ -152,7 +152,7 @@ export default function RecentTransactions() {
             <div className="flex justify-center mb-4">
               <BarChart3 className="w-12 h-12 text-gray-400" />
             </div>
-            <p className="text-gray-500">No transactions yet</p>
+            <p className="text-gray-400">No transactions yet</p>
             <Link href="/wallet/load" className="mt-4 inline-block">
               <Button size="sm">Load Money to Get Started</Button>
             </Link>
@@ -162,7 +162,7 @@ export default function RecentTransactions() {
             {transactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-slate-50/30 rounded-xl hover:from-slate-50 hover:to-slate-100/50 transition-all duration-300 border border-slate-200/60 hover:border-slate-300/60 hover:shadow-md"
+                className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl hover:bg-gray-800/70 transition-all duration-300 hover:shadow-md border border-gray-700/50"
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
@@ -174,21 +174,21 @@ export default function RecentTransactions() {
                     />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold text-white">
                       {getTransactionTitle(transaction.type)}
                     </p>
                     <div className="flex items-center space-x-2">
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-gray-400">
                         {formatDate(transaction.created_at)}
                       </p>
                       {transaction.reference_id && (
-                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-gray-300 bg-gray-700/50 px-2 py-0.5 rounded-full">
                           #{transaction.reference_id.slice(-6)}
                         </span>
                       )}
                     </div>
                     {transaction.description && (
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         {transaction.description}
                       </p>
                     )}
@@ -197,8 +197,8 @@ export default function RecentTransactions() {
                 <div className="text-right space-y-1">
                   <p className={`font-bold text-lg ${
                     transaction.type === 'load_money' || transaction.type === 'refund' 
-                      ? 'text-emerald-600' 
-                      : 'text-red-600'
+                      ? 'text-emerald-400' 
+                      : 'text-red-400'
                   }`}>
                     {transaction.type === 'load_money' || transaction.type === 'refund' ? '+' : '-'}
                     {formatCurrency(transaction.amount)}
