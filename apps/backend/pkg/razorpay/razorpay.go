@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -38,18 +40,39 @@ func (fn *FlexibleNotes) UnmarshalJSON(data []byte) error {
 
 // Client represents Razorpay client
 type Client struct {
-	KeyID      string
-	KeySecret  string
-	BaseURL    string
-	HTTPClient *http.Client
+	KeyID         string
+	KeySecret     string
+	BaseURL       string
+	HTTPClient    *http.Client
+	AccountNumber string // Required for payouts in live mode
 }
 
 // NewClient creates a new Razorpay client
 func NewClient(keyID, keySecret string) *Client {
+	accountNumber := os.Getenv("RAZORPAY_ACCOUNT_NUMBER")
+	if accountNumber == "" {
+		// For testing or if account number is not set, use empty string
+		accountNumber = ""
+	}
+
 	return &Client{
-		KeyID:     keyID,
-		KeySecret: keySecret,
-		BaseURL:   "https://api.razorpay.com/v1",
+		KeyID:         keyID,
+		KeySecret:     keySecret,
+		BaseURL:       "https://api.razorpay.com/v1",
+		AccountNumber: accountNumber,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+// NewClientWithAccount creates a new Razorpay client with explicit account number
+func NewClientWithAccount(keyID, keySecret, accountNumber string) *Client {
+	return &Client{
+		KeyID:         keyID,
+		KeySecret:     keySecret,
+		BaseURL:       "https://api.razorpay.com/v1",
+		AccountNumber: accountNumber,
 		HTTPClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -164,6 +187,11 @@ func (c *Client) makeRequest(method, url string, body interface{}, result interf
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		reqBody = bytes.NewBuffer(jsonBody)
+
+		// Add debug logging for payout-related requests
+		if strings.Contains(url, "payouts") || strings.Contains(url, "contacts") || strings.Contains(url, "fund_accounts") {
+			fmt.Printf("🔍 DEBUG Razorpay Request: %s %s\nPayload: %s\n", method, url, string(jsonBody))
+		}
 	}
 
 	req, err := http.NewRequest(method, url, reqBody)
@@ -174,6 +202,14 @@ func (c *Client) makeRequest(method, url string, body interface{}, result interf
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(c.KeyID, c.KeySecret)
+
+	// Add X-Razorpay-Account header for payouts if account number is available
+	if strings.Contains(url, "payouts") || strings.Contains(url, "contacts") || strings.Contains(url, "fund_accounts") {
+		if c.AccountNumber != "" {
+			req.Header.Set("X-Razorpay-Account", c.AccountNumber)
+			fmt.Printf("🔑 Added X-Razorpay-Account header: %s\n", c.AccountNumber)
+		}
+	}
 
 	// Make request
 	resp, err := c.HTTPClient.Do(req)
@@ -188,10 +224,19 @@ func (c *Client) makeRequest(method, url string, body interface{}, result interf
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 
+	// Add debug logging for payout-related responses
+	if strings.Contains(url, "payouts") || strings.Contains(url, "contacts") || strings.Contains(url, "fund_accounts") {
+		fmt.Printf("🔍 DEBUG Razorpay Response: %d\nBody: %s\n", resp.StatusCode, string(respBody))
+	}
+
 	// Check status code
 	if resp.StatusCode >= 400 {
 		var errorResp RazorpayError
 		if err := json.Unmarshal(respBody, &errorResp); err == nil {
+			// Special handling for common payout errors
+			if strings.Contains(url, "payouts") && resp.StatusCode == 404 {
+				return fmt.Errorf("Razorpay Payouts API not found. This usually means: 1) Payouts not enabled on your account, 2) Wrong API endpoint, or 3) Missing account permissions. Original error: %s", errorResp.Error())
+			}
 			return &errorResp
 		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(respBody))
