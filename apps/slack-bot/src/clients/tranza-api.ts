@@ -217,6 +217,108 @@ export const testConnection = async (client: AxiosInstance): Promise<boolean> =>
 };
 
 /**
+ * Enhanced API client that tracks usage and sends metadata
+ */
+export const createEnhancedAPIClient = (config: TranzaAPIConfig): AxiosInstance => {
+  const client = createAPIClient(config);
+  
+  // Add request interceptor to track commands
+  client.interceptors.request.use((requestConfig) => {
+    // Add Slack-specific headers for tracking
+    requestConfig.headers['X-Source'] = 'slack-bot';
+    requestConfig.headers['X-Request-Time'] = new Date().toISOString();
+    
+    return requestConfig;
+  });
+  
+  // Add response interceptor to log usage
+  client.interceptors.response.use(
+    (response) => {
+      // Log successful requests
+      const command = extractCommandFromURL(response.config.url || '');
+      const responseTime = Date.now() - new Date(response.config.headers['X-Request-Time']).getTime();
+      
+      // Send usage data asynchronously (don't wait for it)
+      logAPIUsage(client, {
+        command,
+        method: response.config.method?.toUpperCase() || 'GET',
+        endpoint: response.config.url || '',
+        statusCode: response.status,
+        responseTime,
+        success: true,
+      }).catch(err => console.warn('Failed to log API usage:', err));
+      
+      return response;
+    },
+    (error) => {
+      // Log failed requests
+      const command = extractCommandFromURL(error.config?.url || '');
+      const responseTime = Date.now() - new Date(error.config?.headers['X-Request-Time']).getTime();
+      
+      logAPIUsage(client, {
+        command,
+        method: error.config?.method?.toUpperCase() || 'GET',
+        endpoint: error.config?.url || '',
+        statusCode: error.response?.status || 0,
+        responseTime,
+        success: false,
+        errorMessage: error.message,
+      }).catch(err => console.warn('Failed to log API usage:', err));
+      
+      return Promise.reject(error);
+    }
+  );
+  
+  return client;
+};
+
+/**
+ * Extract command name from API URL
+ */
+const extractCommandFromURL = (url: string): string => {
+  if (url.includes('/wallet/balance')) return '/fetch-balance';
+  if (url.includes('/transfers')) return '/send-money';
+  if (url.includes('/auth')) return '/auth';
+  return url;
+};
+
+/**
+ * Log API usage data (for internal tracking)
+ */
+interface APIUsageLogData {
+  command: string;
+  method: string;
+  endpoint: string;
+  statusCode: number;
+  responseTime: number;
+  success: boolean;
+  errorMessage?: string;
+}
+
+const logAPIUsage = async (_client: AxiosInstance, data: APIUsageLogData): Promise<void> => {
+  try {
+    // This would be sent to your backend's usage logging endpoint
+    // For now, we'll just log it locally
+    console.log('📊 API Usage:', {
+      timestamp: new Date().toISOString(),
+      command: data.command,
+      method: data.method,
+      endpoint: data.endpoint,
+      statusCode: data.statusCode,
+      responseTime: `${data.responseTime}ms`,
+      success: data.success,
+      ...(data.errorMessage && { error: data.errorMessage }),
+    });
+    
+    // Future: Send to backend usage logging endpoint
+    // await client.post('/api/internal/usage-log', data);
+  } catch (error) {
+    // Silently fail to avoid disrupting the main flow
+    console.warn('Failed to log usage data:', error);
+  }
+};
+
+/**
  * Update the API key for a client
  */
 export const updateAPIKey = (client: AxiosInstance, newApiKey: string): void => {
