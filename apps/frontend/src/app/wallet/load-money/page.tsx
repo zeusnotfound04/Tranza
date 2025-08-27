@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/useAuth';
 import { WalletService } from '@/lib/services';
 import { Card } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import LoadMoneyModal from '@/components/wallet/LoadMoneyModal';
 import PaymentHistory from '@/components/wallet/PaymentHistory';
@@ -249,4 +249,4 @@ function LoadMoneyPage() {
   );
 }
 
-export default withAuth(LoadMoneyPage);
+export default LoadMoneyPage

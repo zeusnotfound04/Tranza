@@ -27,7 +27,7 @@ class TokenManager {
   }
 
   static async getAccessToken(): Promise<string | null> {
-    console.log("🔍 [TokenManager] Requesting token from /api/token");
+        console.log("🔍 [TokenManager] Requesting token from /api/token");
     
     const tokenResponse = await fetch("/api/token", {
       method: 'GET',
@@ -39,8 +39,8 @@ class TokenManager {
     if (tokenResponse.ok) {
       const tokenData = await tokenResponse.json();
       console.log("✅ [TokenManager] Token response:", tokenData);
-      console.log("🔑 [TokenManager] Access token:", tokenData.access_token?.substring(0, 20) + "...");
-      return tokenData.access_token;
+      console.log("🔑 [TokenManager] Access token:", tokenData.data.token);
+      return tokenData.data.token;
     }
 
     console.error("❌ [TokenManager] Failed to retrieve access token, status:", tokenResponse.status);
@@ -48,7 +48,6 @@ class TokenManager {
     console.error("❌ [TokenManager] Error response:", errorText);
     return null;
   }
-
 
   static getRefreshToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -79,18 +78,21 @@ class APIClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // Add Bearer token if available
+    const accessToken = await TokenManager.getAccessToken();
+    console.log("🔍 DEBUG API Client: Raw access token:", accessToken);
+    console.log("🔍 DEBUG API Client: Token type:", typeof accessToken);
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...options.headers as Record<string, string>,
     };
 
-    // Add Bearer token if available
-    const accessToken = await TokenManager.getAccessToken();
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
-      console.log("🔑 [lib/api-client] Access token retrieved:", accessToken?.substring(0, 20) + "...");
+      console.log("✅ DEBUG API Client: Authorization header set:", headers.Authorization.substring(0, 20) + "...");
     } else {
-      console.warn("⚠️ [lib/api-client] No access token available");
+      console.log("❌ DEBUG API Client: No access token available!");
     }
 
     const config: RequestInit = {
@@ -100,9 +102,8 @@ class APIClient {
     };
 
     // Debug logs
-    console.log('🚀 [lib/api-client] Making request to:', url);
-    console.log('📋 [lib/api-client] Request headers:', headers);
-
+    console.log('DEBUG API Client: Making request to:', url);
+    console.log('DEBUG API Client: Request headers:', headers);
     try {
       const response = await fetch(url, config);
       

@@ -5,6 +5,7 @@ import {
   LoadMoneyResponse,
   VerifyPaymentRequest,
   VerifyPaymentResponse,
+  WalletVerificationResponse,
   UpdateWalletSettingsRequest,
   APIResponse,
 } from '@/types/api';
@@ -26,7 +27,7 @@ export class WalletService {
   }
 
   // Verify payment and credit wallet
-  static async verifyPayment(data: VerifyPaymentRequest): Promise<APIResponse<VerifyPaymentResponse>> {
+  static async verifyPayment(data: VerifyPaymentRequest): Promise<APIResponse<WalletVerificationResponse>> {
     return apiClient.post('/api/v1/wallet/verify-payment', data);
   }
 }

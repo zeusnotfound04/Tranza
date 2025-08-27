@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/useAuth';
 import { WalletService } from '@/lib/services';
 import { Card } from '@tranza/ui/components/ui/card-ui';
-import { Button } from '@tranza/ui/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@tranza/ui/components/ui/input';
 import { Alert, AlertDescription } from '@tranza/ui/components/ui/alert';
 import { Badge } from '@tranza/ui/components/ui/badge';

@@ -1,28 +1,8 @@
 "use client"
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { apiClient, APIResponse } from '../services/api';
+import { User } from '@/types/api';
 import Cookies from 'js-cookie';
-
-interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  verified: boolean;
-}
-
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<APIResponse<any>>;
-  register: (userData: RegisterData) => Promise<APIResponse<any>>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
-  getToken: () => Promise<string | null>;
-}
 
 interface RegisterData {
   first_name: string;
@@ -31,12 +11,28 @@ interface RegisterData {
   password: string;
 }
 
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  isLoading: boolean; // Add this for compatibility
+  isAuthenticated: boolean;
+  error: string | null;
+  login: (email: string, password: string) => Promise<APIResponse<any>>;
+  register: (userData: RegisterData) => Promise<APIResponse<any>>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+  getToken: () => Promise<string | null>;
+  clearError: () => void;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const isAuthenticated = !!user && !!token;
 
@@ -81,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<APIResponse<any>> => {
     setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.login(email, password);
       
@@ -94,14 +91,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Save token to cookies (expires in 30 days)
         Cookies.set('tranza_token', newToken, { expires: 30, secure: true, sameSite: 'strict' });
+      } else {
+        setError(response.error || 'Login failed');
       }
       
       return response;
     } catch (error) {
       console.error('Login error:', error);
+      const errorMessage = 'Login failed';
+      setError(errorMessage);
       return {
         success: false,
-        error: 'Login failed',
+        error: errorMessage,
       };
     } finally {
       setLoading(false);
@@ -110,6 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (userData: RegisterData): Promise<APIResponse<any>> => {
     setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.register(userData);
       
@@ -123,14 +125,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Save token to cookies
         Cookies.set('tranza_token', newToken, { expires: 30, secure: true, sameSite: 'strict' });
+      } else {
+        setError(response.error || 'Registration failed');
       }
       
       return response;
     } catch (error) {
       console.error('Register error:', error);
+      const errorMessage = 'Registration failed';
+      setError(errorMessage);
       return {
         success: false,
-        error: 'Registration failed',
+        error: errorMessage,
       };
     } finally {
       setLoading(false);
@@ -140,8 +146,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setError(null);
     Cookies.remove('tranza_token');
     apiClient.setAuthToken('');
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   const refreshUser = async () => {
@@ -175,6 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (data.success && data.data?.token) {
           // Update the auth state with the retrieved token
           const retrievedToken = data.data.token;
+          console.log('Retrieved token from /api/token:', retrievedToken);
           setToken(retrievedToken);
           apiClient.setAuthToken(retrievedToken);
           
@@ -207,12 +219,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     token,
     loading,
+    isLoading: loading, // Add this alias for compatibility
     isAuthenticated,
+    error,
     login,
     register,
     logout,
     refreshUser,
     getToken,
+    clearError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

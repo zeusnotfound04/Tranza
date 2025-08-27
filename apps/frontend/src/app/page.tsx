@@ -80,7 +80,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDAsIDAsIDAsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDwvcGF0dGVybj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPgo8L3N2Zz4=')] opacity-20"></div>
       
@@ -99,10 +99,10 @@ export default function Home() {
                 />
               </div>
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-blue-600 bg-clip-text text-transparent mb-6">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-blue-600 dark:from-gray-100 dark:via-gray-300 dark:to-blue-400 bg-clip-text text-transparent mb-6">
               Welcome to Tranza
             </h1>
-            <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
               Experience the future of financial transactions with our secure, 
               AI-powered platform designed for modern digital payments.
             </p>
@@ -117,7 +117,7 @@ export default function Home() {
             ) : user ? (
               <div className="max-w-4xl mx-auto">
                 {/* User Welcome Card */}
-                <div className="bg-white/80 backdrop-blur-lg border border-gray-200 rounded-3xl p-8 mb-12 shadow-2xl">
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border border-gray-200 dark:border-gray-700 rounded-3xl p-8 mb-12 shadow-2xl">
                   <div className="text-center">
                     <div className="mb-6">
                       {user.avatar ? (
@@ -134,11 +134,11 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                    <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-3">
                       Welcome back, {user.username}!
                     </h2>
-                    <p className="text-gray-600 mb-6 text-lg">{user.email}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-8">
+                    <p className="text-gray-600 dark:text-gray-300 mb-6 text-lg">{user.email}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400 mb-8">
                       <div className="flex items-center justify-center space-x-2">
                         <FiUsers className="text-blue-400" />
                         <span>Member since {new Date(user.created_at).toLocaleDateString()}</span>

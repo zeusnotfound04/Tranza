@@ -254,16 +254,31 @@ export interface VerifyPaymentResponse {
   currency: string;
 }
 
+export interface WalletVerificationResponse {
+  success: boolean;
+  new_balance: number;
+  transaction_id: string;
+  message: string;
+  amount: number;
+}
+
 // API Key Types
 export interface APIKey {
   id: number;
-  user_id: number;
-  key_hash: string;
   label: string;
-  expires_at?: string;
-  last_used_at?: string;
+  key_type: string;
+  scopes: string[];
+  usage_count: number;
+  rate_limit: number;
   is_active: boolean;
   created_at: string;
+  expires_at?: string;
+  last_used_at?: string;
+}
+
+export interface ListAPIKeysResponse {
+  keys: APIKey[];
+  total: number;
 }
 
 export interface CreateAPIKeyRequest {
@@ -278,6 +293,66 @@ export interface CreateAPIKeyResponse {
 
 export interface RevokeAPIKeyRequest {
   key_id: number;
+}
+
+// API Usage Types
+export interface APIUsageLog {
+  id: number;
+  api_key_id: number;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  request_size: number;
+  response_size: number;
+  response_time: number;
+  ip_address: string;
+  user_agent?: string;
+  command?: string;
+  amount_spent?: number;
+  currency?: string;
+  error_message?: string;
+  timestamp: string;
+}
+
+export interface UsageStatsResponse {
+  key_id: number;
+  total_requests: number;
+  total_amount_spent: number;
+  spending_limit: number;
+  remaining_limit: number;
+  currency: string;
+  avg_response_time: number;
+  success_rate: number;
+  last_used_at?: string;
+  period_start: string;
+  period_end: string;
+  command_usage: CommandUsage[];
+  time_series_data: TimeSeriesData[];
+}
+
+export interface CommandUsage {
+  command: string;
+  count: number;
+  total_amount: number;
+  avg_amount: number;
+  success_rate: number;
+  avg_response_time: number;
+}
+
+export interface TimeSeriesData {
+  date: string;
+  requests: number;
+  amount_spent: number;
+  avg_response_time: number;
+  success_rate: number;
+}
+
+export interface DetailedUsageResponse {
+  logs: APIUsageLog[];
+  total: number;
+  page: number;
+  limit: number;
+  has_more: boolean;
 }
 
 // Response Wrappers

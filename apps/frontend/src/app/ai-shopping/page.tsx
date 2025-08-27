@@ -12,7 +12,7 @@ function AIShoppingPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
           <div>
-            <h1 className="text-3xl font-bold text-black">AI Shopping Assistant</h1>
+            <h1 className="text-3xl font-bold text-white">AI Shopping Assistant</h1>
             <p className="mt-2 text-gray-600">
               Use AI to find and purchase clothing with your Tranza wallet
             </p>

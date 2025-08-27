@@ -1,4 +1,6 @@
 // Base API configuration and client
+import { ListAPIKeysResponse } from '@/types/api';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
 export interface APIResponse<T = any> {
@@ -258,18 +260,19 @@ export class TranzaAPIClient {
   }
 
   // API Key management (for bot users)
-  async generateAPIKey(label: string, ttlHours: number = 8760): Promise<APIResponse<{ api_key: string; key_id: string }>> {
+  async generateAPIKey(label: string, password: string, ttlHours: number = 8760): Promise<APIResponse<{ api_key: string; key_id: string }>> {
     return this.makeRequest('/api/v1/keys', {
       method: 'POST',
-      body: JSON.stringify({ label, ttl_hours: ttlHours }),
+      body: JSON.stringify({ label, password, ttl_hours: ttlHours }),
     });
   }
 
-  async generateBotAPIKey(label: string, workspaceId: string, botUserId: string, ttlHours: number = 8760): Promise<APIResponse<{ api_key: string; key_id: string }>> {
+  async generateBotAPIKey(label: string, password: string, workspaceId: string, botUserId: string, ttlHours: number = 8760): Promise<APIResponse<{ api_key: string; key_id: string }>> {
     return this.makeRequest('/api/v1/keys/bot', {
       method: 'POST',
       body: JSON.stringify({ 
         label, 
+        password,
         workspace_id: workspaceId, 
         bot_user_id: botUserId, 
         ttl_hours: ttlHours 
@@ -277,14 +280,38 @@ export class TranzaAPIClient {
     });
   }
 
-  async getAPIKeys(): Promise<APIResponse<any[]>> {
+  async getAPIKeys(): Promise<APIResponse<ListAPIKeysResponse>> {
     return this.makeRequest('/api/v1/keys');
+  }
+
+  async viewAPIKey(keyId: string, password: string): Promise<APIResponse<{ api_key: string; message: string }>> {
+    return this.makeRequest(`/api/v1/keys/${keyId}/view`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
   }
 
   async revokeAPIKey(keyId: string): Promise<APIResponse<any>> {
     return this.makeRequest(`/api/v1/keys/${keyId}`, {
       method: 'DELETE',
     });
+  }
+
+  // Detailed usage methods
+  async getDetailedUsageStats(keyId: string): Promise<APIResponse<any>> {
+    return this.makeRequest(`/api/v1/keys/${keyId}/usage/detailed`);
+  }
+
+  async getUsageLogs(keyId: string, page: number = 0, limit: number = 20): Promise<APIResponse<any>> {
+    return this.makeRequest(`/api/v1/keys/${keyId}/logs?page=${page}&limit=${limit}`);
+  }
+
+  async getTimeSeriesData(keyId: string, period: string = '7d'): Promise<APIResponse<any>> {
+    return this.makeRequest(`/api/v1/keys/${keyId}/usage/timeseries?period=${period}`);
+  }
+
+  async getCommandData(keyId: string): Promise<APIResponse<any>> {
+    return this.makeRequest(`/api/v1/keys/${keyId}/usage/commands`);
   }
 }
 
