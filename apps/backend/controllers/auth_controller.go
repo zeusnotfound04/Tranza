@@ -45,14 +45,20 @@ func (ac *AuthController) clearAuthCookies(ctx *gin.Context) {
 
 func (ac *AuthController) getTokenFromCookie(ctx *gin.Context) string {
 	token, err := ctx.Cookie("access_token")
+	fmt.Printf("DEBUG AuthController: Cookie token: '%s', error: %v\n", token, err)
+
 	if err != nil {
 		// Fallback to Authorization header
 		authHeader := ctx.GetHeader("Authorization")
+		fmt.Printf("DEBUG AuthController: Authorization header: '%s'\n", authHeader)
 		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			fmt.Printf("DEBUG AuthController: Using Authorization header token\n")
 			return authHeader[7:]
 		}
+		fmt.Printf("DEBUG AuthController: No valid token found\n")
 		return ""
 	}
+	fmt.Printf("DEBUG AuthController: Using cookie token\n")
 	return token
 }
 
@@ -243,36 +249,30 @@ func (ac *AuthController) ValidateTokenHandler(ctx *gin.Context) {
 // AuthMiddleware provides JWT authentication middleware
 func (ac *AuthController) AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		fmt.Printf("DEBUG: AuthMiddleware called for path: %s\n", ctx.Request.URL.Path)
-		fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
-		fmt.Printf("DEBUG: All cookies: %+v\n", ctx.Request.Cookies())
+		fmt.Printf("DEBUG AuthController: AuthMiddleware called for %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 
 		token := ac.getTokenFromCookie(ctx)
-		fmt.Printf("DEBUG: Token from cookie: %s\n", token)
-
 		if token == "" {
-			fmt.Printf("DEBUG: No token found in cookies\n")
+			fmt.Printf("DEBUG AuthController: No token found\n")
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			ctx.Abort()
 			return
 		}
 
-		fmt.Printf("DEBUG: Validating token...\n")
+		fmt.Printf("DEBUG AuthController: Token found, validating...\n")
 		user, err := ac.authService.ValidateToken(ctx.Request.Context(), token)
 		if err != nil {
-			fmt.Printf("DEBUG: Token validation failed: %v\n", err)
+			fmt.Printf("DEBUG AuthController: Token validation failed: %v\n", err)
 			ac.clearAuthCookies(ctx)
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			ctx.Abort()
 			return
 		}
 
-		fmt.Printf("DEBUG: Token validation successful. User: %+v\n", user)
+		fmt.Printf("DEBUG AuthController: Token valid for user: %s (ID: %s)\n", user.Email, user.ID)
 		// Store user in context for use in subsequent handlers
 		ctx.Set("user", user)
 		ctx.Set("user_id", user.ID)
-		ctx.Set("userID", user.ID.String()) // Add this for wallet controller compatibility
-		fmt.Printf("DEBUG: Set userID in context: %s\n", user.ID.String())
 		ctx.Next()
 	}
 }

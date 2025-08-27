@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models/dto"
 	"github.com/zeusnotfound04/Tranza/services"
 	"github.com/zeusnotfound04/Tranza/utils"
@@ -27,17 +28,25 @@ func (h *WalletHandler) GetWallet(c *gin.Context) {
 	fmt.Printf("DEBUG: Request URL: %s\n", c.Request.URL.Path)
 	fmt.Printf("DEBUG: Request method: %s\n", c.Request.Method)
 
-	userID := c.GetString("userID") // From JWT middleware
-	fmt.Printf("DEBUG: UserID from JWT middleware: %s\n", userID)
-
-	if userID == "" {
-		fmt.Printf("DEBUG: UserID is empty - JWT middleware may not have set it\n")
+	userID, exists := c.Get("user_id") // From JWT middleware
+	if !exists {
+		fmt.Printf("DEBUG: UserID not found in context - authentication failed\n")
 		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
 		return
 	}
 
-	fmt.Printf("DEBUG: Calling wallet service with userID: %s\n", userID)
-	wallet, err := h.walletService.GetWalletByUserID(userID)
+	// Convert to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		fmt.Printf("DEBUG: UserID type assertion failed, got: %T\n", userID)
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Invalid user ID type", nil)
+		return
+	}
+
+	fmt.Printf("DEBUG: UserID from JWT middleware: %s\n", userUUID)
+
+	fmt.Printf("DEBUG: Calling wallet service with userID: %s\n", userUUID)
+	wallet, err := h.walletService.GetWalletByUserID(userUUID.String())
 	if err != nil {
 		fmt.Printf("DEBUG: Wallet service error: %v\n", err)
 		utils.ErrorResponse(c, http.StatusNotFound, "Wallet not found", err)
@@ -61,7 +70,11 @@ func (h *WalletHandler) GetWallet(c *gin.Context) {
 
 // Create order for loading money
 func (h *WalletHandler) CreateLoadMoneyOrder(c *gin.Context) {
-	userID := c.GetString("userID")
+	userID, err := utils.GetUserIDStringFromContext(c)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User authentication failed", err)
+		return
+	}
 
 	// Debug log
 	fmt.Printf("DEBUG: CreateLoadMoneyOrder called for userID: %s\n", userID)
@@ -95,7 +108,11 @@ func (h *WalletHandler) CreateLoadMoneyOrder(c *gin.Context) {
 
 // Verify Razorpay payment and credit wallet
 func (h *WalletHandler) VerifyPayment(c *gin.Context) {
-	userID := c.GetString("userID")
+	userID, err := utils.GetUserIDStringFromContext(c)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User authentication failed", err)
+		return
+	}
 
 	var req dto.VerifyPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -119,7 +136,11 @@ func (h *WalletHandler) VerifyPayment(c *gin.Context) {
 
 // Update wallet settings
 func (h *WalletHandler) UpdateWalletSettings(c *gin.Context) {
-	userID := c.GetString("userID")
+	userID, err := utils.GetUserIDStringFromContext(c)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User authentication failed", err)
+		return
+	}
 
 	var req dto.UpdateWalletSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,7 +148,7 @@ func (h *WalletHandler) UpdateWalletSettings(c *gin.Context) {
 		return
 	}
 
-	err := h.walletService.UpdateWalletSettings(userID, &req)
+	err = h.walletService.UpdateWalletSettings(userID, &req)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update settings", err)
 		return

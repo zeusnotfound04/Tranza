@@ -31,7 +31,7 @@ func NewAIController(
 
 // ProcessPaymentRequest handles natural language payment requests
 func (ac *AIController) ProcessPaymentRequest(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -62,7 +62,7 @@ func (ac *AIController) ProcessPaymentRequest(c *gin.Context) {
 
 // ConfirmPayment handles payment confirmation
 func (ac *AIController) ConfirmPayment(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -104,7 +104,7 @@ func (ac *AIController) ConfirmPayment(c *gin.Context) {
 
 // GetPaymentHistory returns AI payment request history
 func (ac *AIController) GetPaymentHistory(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -155,7 +155,7 @@ func (ac *AIController) GetPaymentHistory(c *gin.Context) {
 
 // GetSpendingLimits returns user's AI spending limits
 func (ac *AIController) GetSpendingLimits(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -180,7 +180,7 @@ func (ac *AIController) GetSpendingLimits(c *gin.Context) {
 
 // UpdateSpendingLimits updates user's AI spending limits
 func (ac *AIController) UpdateSpendingLimits(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -211,7 +211,7 @@ func (ac *AIController) UpdateSpendingLimits(c *gin.Context) {
 
 // GetSpendingAnalytics returns spending analytics and insights
 func (ac *AIController) GetSpendingAnalytics(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -239,7 +239,7 @@ func (ac *AIController) GetSpendingAnalytics(c *gin.Context) {
 
 // GetPaymentRequest returns details of a specific payment request
 func (ac *AIController) GetPaymentRequest(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -276,7 +276,7 @@ func (ac *AIController) GetPaymentRequest(c *gin.Context) {
 
 // CancelPaymentRequest cancels a pending payment request
 func (ac *AIController) CancelPaymentRequest(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return

@@ -13,12 +13,14 @@ import (
 )
 
 type APIKeyController struct {
-	apiKeyService *services.APIKeyService
+	apiKeyService   *services.APIKeyService
+	usageLogService *services.APIUsageLogService
 }
 
-func NewAPIKeyController(apiKeyService *services.APIKeyService) *APIKeyController {
+func NewAPIKeyController(apiKeyService *services.APIKeyService, usageLogService *services.APIUsageLogService) *APIKeyController {
 	return &APIKeyController{
-		apiKeyService: apiKeyService,
+		apiKeyService:   apiKeyService,
+		usageLogService: usageLogService,
 	}
 }
 
@@ -43,6 +45,12 @@ func (c *APIKeyController) CreateAPIKey(ctx *gin.Context) {
 		return
 	}
 
+	// Validate password
+	if len(req.Password) < 6 {
+		utils.BadRequestResponse(ctx, "Password must be at least 6 characters long", nil)
+		return
+	}
+
 	// Default TTL if not specified
 	if req.TTLHours == 0 {
 		req.TTLHours = 8760 // 1 year default
@@ -51,15 +59,21 @@ func (c *APIKeyController) CreateAPIKey(ctx *gin.Context) {
 	// Convert userID to UUID
 	userUUID, ok := userID.(uuid.UUID)
 	if !ok {
+		fmt.Printf("DEBUG CreateAPIKey: Invalid user ID type: %T, value: %v\n", userID, userID)
 		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
 		return
 	}
 
-	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, req.TTLHours)
+	fmt.Printf("DEBUG CreateAPIKey: Creating API key for user %s with label '%s' and TTL %d hours\n", userUUID, req.Label, req.TTLHours)
+
+	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, req.Password, req.TTLHours)
 	if err != nil {
+		fmt.Printf("DEBUG CreateAPIKey: Failed to generate API key: %v\n", err)
 		utils.InternalServerErrorResponse(ctx, "Failed to create API key", err)
 		return
 	}
+
+	fmt.Printf("DEBUG CreateAPIKey: Successfully created API key with raw key prefix: %s...\n", rawKey[:8])
 
 	response := dto.CreateAPIKeyResponse{
 		APIKey:   rawKey,
@@ -100,7 +114,7 @@ func (c *APIKeyController) CreateBotAPIKey(ctx *gin.Context) {
 	}
 
 	// Use the same Generate method - all keys are now universal
-	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, ttl)
+	rawKey, err := c.apiKeyService.Generate(ctx.Request.Context(), userUUID, req.Label, req.Password, ttl)
 	if err != nil {
 		utils.InternalServerErrorResponse(ctx, "Failed to create API key", err)
 		return
@@ -130,19 +144,51 @@ func (c *APIKeyController) GetAPIKeys(ctx *gin.Context) {
 		return
 	}
 
-	fmt.Printf("DEBUG: UserID type: %T, value: %v\n", userID, userID)
-
-	// TODO: This is a temporary implementation. The proper fix is to update the
-	// APIKey model and repository to use UUID instead of uint for UserID
-	// to match the User model structure.
-
-	// For now, return empty list to prevent crashes
-	response := dto.ListAPIKeysResponse{
-		Keys:  []dto.APIKeyInfo{},
-		Total: 0,
+	// Now user_id should already be a UUID from the middleware
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		fmt.Printf("DEBUG GetAPIKeys: Unexpected user ID type: %T, value: %v\n", userID, userID)
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
 	}
 
-	utils.SuccessResponse(ctx, http.StatusOK, "API keys retrieved successfully (temporary: UUID/uint mismatch needs to be fixed)", response)
+	fmt.Printf("DEBUG GetAPIKeys: Fetching API keys for user %s\n", userUUID)
+
+	// Get all API keys for the user
+	keys, err := c.apiKeyService.Repo.GetByUserID(ctx.Request.Context(), userUUID)
+	if err != nil {
+		fmt.Printf("DEBUG GetAPIKeys: Error fetching keys: %v\n", err)
+		utils.InternalServerErrorResponse(ctx, "Failed to fetch API keys", err)
+		return
+	}
+
+	fmt.Printf("DEBUG GetAPIKeys: Found %d keys for user %s\n", len(keys), userUUID)
+
+	// Convert to response format
+	var keyInfos []dto.APIKeyInfo
+	for _, key := range keys {
+		if key.IsActive {
+			keyInfo := dto.APIKeyInfo{
+				ID:         key.ID,
+				Label:      key.Label,
+				KeyType:    key.KeyType,
+				Scopes:     key.GetScopes(),
+				CreatedAt:  key.CreatedAt,
+				ExpiresAt:  key.ExpiresAt,
+				LastUsedAt: key.LastUsedAt,
+				UsageCount: key.UsageCount,
+				IsActive:   key.IsActive,
+			}
+			keyInfos = append(keyInfos, keyInfo)
+		}
+	}
+
+	response := dto.ListAPIKeysResponse{
+		Keys:  keyInfos,
+		Total: len(keyInfos),
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "API keys retrieved successfully", response)
 }
 
 // GetAPIKeyUsage gets usage statistics for a specific API key
@@ -246,6 +292,53 @@ func (c *APIKeyController) RevokeAPIKey(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, http.StatusOK, "API key revoked successfully", nil)
 }
 
+// ViewAPIKey allows a user to view their API key by providing the password
+// POST /api/keys/:id/view
+func (c *APIKeyController) ViewAPIKey(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(ctx, "User not authenticated")
+		return
+	}
+
+	keyIDStr := ctx.Param("id")
+	keyID, err := strconv.ParseUint(keyIDStr, 10, 32)
+	if err != nil {
+		utils.BadRequestResponse(ctx, "Invalid key ID", err)
+		return
+	}
+
+	var req dto.ViewAPIKeyRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.BadRequestResponse(ctx, "Invalid request body", err)
+		return
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	apiKey, err := c.apiKeyService.ViewAPIKey(ctx.Request.Context(), uint(keyID), userUUID, req.Password)
+	if err != nil {
+		if err.Error() == "invalid password" {
+			utils.UnauthorizedResponse(ctx, "Invalid password")
+			return
+		}
+		utils.InternalServerErrorResponse(ctx, "Failed to retrieve API key", err)
+		return
+	}
+
+	response := dto.ViewAPIKeyResponse{
+		APIKey:  apiKey,
+		Message: "API key retrieved successfully",
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "API key retrieved successfully", response)
+}
+
 // Legacy method for backwards compatibility
 func (c *APIKeyController) Create(ctx *gin.Context) {
 	c.CreateAPIKey(ctx)
@@ -266,4 +359,195 @@ func (c *APIKeyController) Revoke(ctx *gin.Context) {
 	ctx.JSON(http.StatusBadRequest, gin.H{
 		"error": "This endpoint is deprecated. Please use DELETE /api/v1/keys/:id instead",
 	})
+}
+
+// GetDetailedUsageStats gets comprehensive usage statistics for a specific API key
+// GET /api/keys/:id/usage/detailed
+func (c *APIKeyController) GetDetailedUsageStats(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(ctx, "User not authenticated")
+		return
+	}
+
+	keyIDStr := ctx.Param("id")
+	keyID, err := strconv.ParseUint(keyIDStr, 10, 32)
+	if err != nil {
+		utils.BadRequestResponse(ctx, "Invalid key ID", err)
+		return
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Get days parameter (default 30 days)
+	daysStr := ctx.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days < 1 || days > 365 {
+		days = 30
+	}
+
+	summary, err := c.usageLogService.GetUsageSummary(ctx.Request.Context(), uint(keyID), userUUID, days)
+	if err != nil {
+		utils.NotFoundResponse(ctx, "API key not found or access denied")
+		return
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Detailed usage statistics retrieved successfully", summary)
+}
+
+// GetUsageLogs gets paginated usage logs for a specific API key
+// GET /api/keys/:id/logs
+func (c *APIKeyController) GetUsageLogs(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(ctx, "User not authenticated")
+		return
+	}
+
+	keyIDStr := ctx.Param("id")
+	keyID, err := strconv.ParseUint(keyIDStr, 10, 32)
+	if err != nil {
+		utils.BadRequestResponse(ctx, "Invalid key ID", err)
+		return
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Get pagination parameters
+	limitStr := ctx.DefaultQuery("limit", "50")
+	offsetStr := ctx.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 1000 {
+		limit = 50
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	// Verify user owns this API key
+	_, err = c.apiKeyService.GetUsageStats(ctx.Request.Context(), uint(keyID), userUUID)
+	if err != nil {
+		utils.NotFoundResponse(ctx, "API key not found or access denied")
+		return
+	}
+
+	logs, err := c.usageLogService.GetUsageLogs(ctx.Request.Context(), uint(keyID), limit, offset)
+	if err != nil {
+		utils.InternalServerErrorResponse(ctx, "Failed to retrieve usage logs", err)
+		return
+	}
+
+	response := map[string]interface{}{
+		"logs":   logs,
+		"limit":  limit,
+		"offset": offset,
+		"total":  len(logs),
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Usage logs retrieved successfully", response)
+}
+
+// GetTimeSeriesData gets time-series usage data for charts
+// GET /api/keys/:id/usage/timeseries
+func (c *APIKeyController) GetTimeSeriesData(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(ctx, "User not authenticated")
+		return
+	}
+
+	keyIDStr := ctx.Param("id")
+	keyID, err := strconv.ParseUint(keyIDStr, 10, 32)
+	if err != nil {
+		utils.BadRequestResponse(ctx, "Invalid key ID", err)
+		return
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Get days parameter
+	daysStr := ctx.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days < 1 || days > 365 {
+		days = 30
+	}
+
+	// Verify user owns this API key
+	_, err = c.apiKeyService.GetUsageStats(ctx.Request.Context(), uint(keyID), userUUID)
+	if err != nil {
+		utils.NotFoundResponse(ctx, "API key not found or access denied")
+		return
+	}
+
+	timeSeriesData, err := c.usageLogService.GetTimeSeriesData(ctx.Request.Context(), uint(keyID), days)
+	if err != nil {
+		utils.InternalServerErrorResponse(ctx, "Failed to retrieve time series data", err)
+		return
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Time series data retrieved successfully", timeSeriesData)
+}
+
+// GetCommandData gets command-specific usage data
+// GET /api/keys/:id/usage/commands
+func (c *APIKeyController) GetCommandData(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(ctx, "User not authenticated")
+		return
+	}
+
+	keyIDStr := ctx.Param("id")
+	keyID, err := strconv.ParseUint(keyIDStr, 10, 32)
+	if err != nil {
+		utils.BadRequestResponse(ctx, "Invalid key ID", err)
+		return
+	}
+
+	// Convert userID to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	// Get days parameter
+	daysStr := ctx.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days < 1 || days > 365 {
+		days = 30
+	}
+
+	// Verify user owns this API key
+	_, err = c.apiKeyService.GetUsageStats(ctx.Request.Context(), uint(keyID), userUUID)
+	if err != nil {
+		utils.NotFoundResponse(ctx, "API key not found or access denied")
+		return
+	}
+
+	commandData, err := c.usageLogService.GetCommandData(ctx.Request.Context(), uint(keyID), days)
+	if err != nil {
+		utils.InternalServerErrorResponse(ctx, "Failed to retrieve command data", err)
+		return
+	}
+
+	utils.SuccessResponse(ctx, http.StatusOK, "Command data retrieved successfully", commandData)
 }

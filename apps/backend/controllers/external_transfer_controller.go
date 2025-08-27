@@ -262,8 +262,7 @@ func (c *ExternalTransferController) BotGetTransferStatus(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, http.StatusOK, "Transfer status retrieved successfully", botResponse)
 }
 
-// BotGetWalletBalance retrieves wallet balance for bot users
-// GET /api/bot/wallet/balance
+
 func (c *ExternalTransferController) BotGetWalletBalance(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
@@ -298,8 +297,6 @@ func (c *ExternalTransferController) BotGetWalletBalance(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, http.StatusOK, "Wallet balance retrieved successfully", response)
 }
 
-// GetTransferFees returns current transfer fee structure
-// GET /api/transfers/fees
 func (c *ExternalTransferController) GetTransferFees(ctx *gin.Context) {
 	response := &dto.TransferFeesResponse{
 		UPIFee:       utils.ParseDecimal("2.00"),   // ₹2 for UPI transfers

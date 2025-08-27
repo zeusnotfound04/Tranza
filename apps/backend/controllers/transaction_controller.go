@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zeusnotfound04/Tranza/models/dto"
 	"github.com/zeusnotfound04/Tranza/services"
 	"github.com/zeusnotfound04/Tranza/utils"
@@ -35,14 +36,22 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 	fmt.Printf("DEBUG: Request method: %s\n", ctx.Request.Method)
 	fmt.Printf("DEBUG: Request headers: %+v\n", ctx.Request.Header)
 
-	userID := ctx.GetString("userID") // From JWT middleware
-	fmt.Printf("DEBUG: UserID from context: %s\n", userID)
-
-	if userID == "" {
-		fmt.Printf("DEBUG: UserID is empty - authentication failed\n")
+	userID, exists := ctx.Get("user_id") // From JWT middleware
+	if !exists {
+		fmt.Printf("DEBUG: UserID not found in context - authentication failed\n")
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
 	}
+
+	// Convert to UUID
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		fmt.Printf("DEBUG: UserID type assertion failed, got: %T\n", userID)
+		utils.InternalServerErrorResponse(ctx, "Invalid user ID type", nil)
+		return
+	}
+
+	fmt.Printf("DEBUG: UserID from context: %s\n", userUUID)
 
 	// Parse query parameters
 	var req dto.TransactionHistoryRequest
@@ -69,14 +78,14 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 
 	// Get transaction history
 	transactions, total, err := c.transactionService.GetTransactionHistory(
-		userID,
+		userUUID.String(),
 		req.Limit,
 		offset,
 		req.TransactionType,
 	)
 	if err != nil {
 		utils.LogError(err, map[string]interface{}{
-			"user_id": userID,
+			"user_id": userUUID.String(),
 			"action":  "get_transaction_history",
 		})
 		utils.InternalServerErrorResponse(ctx, "Failed to get transaction history", err)
@@ -96,9 +105,9 @@ func (c *TransactionController) GetTransactionHistory(ctx *gin.Context) {
 
 // GetTransaction retrieves a specific transaction by ID
 func (c *TransactionController) GetTransaction(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
-	if userID == "" {
-		utils.UnauthorizedResponse(ctx, "User not authenticated")
+	userID, err := utils.GetUserIDStringFromContext(ctx)
+	if err != nil {
+		utils.UnauthorizedResponse(ctx, err.Error())
 		return
 	}
 
@@ -125,9 +134,9 @@ func (c *TransactionController) GetTransaction(ctx *gin.Context) {
 
 // GetTransactionStats retrieves transaction statistics
 func (c *TransactionController) GetTransactionStats(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
-	if userID == "" {
-		utils.UnauthorizedResponse(ctx, "User not authenticated")
+	userID, err := utils.GetUserIDStringFromContext(ctx)
+	if err != nil {
+		utils.UnauthorizedResponse(ctx, "User authentication failed")
 		return
 	}
 
@@ -147,9 +156,9 @@ func (c *TransactionController) GetTransactionStats(ctx *gin.Context) {
 
 // GetTransactionAnalytics retrieves transaction analytics
 func (c *TransactionController) GetTransactionAnalytics(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
-	if userID == "" {
-		utils.UnauthorizedResponse(ctx, "User not authenticated")
+	userID, err := utils.GetUserIDStringFromContext(ctx)
+	if err != nil {
+		utils.UnauthorizedResponse(ctx, "User authentication failed")
 		return
 	}
 
@@ -177,7 +186,7 @@ func (c *TransactionController) GetTransactionAnalytics(ctx *gin.Context) {
 
 // SearchTransactions searches transactions with advanced filters
 func (c *TransactionController) SearchTransactions(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -223,7 +232,7 @@ func (c *TransactionController) SearchTransactions(ctx *gin.Context) {
 
 // GetTransactionsByType retrieves transactions filtered by type
 func (c *TransactionController) GetTransactionsByType(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -298,7 +307,7 @@ func (c *TransactionController) GetTransactionsByType(ctx *gin.Context) {
 
 // GetTransactionReceipt generates and returns transaction receipt
 func (c *TransactionController) GetTransactionReceipt(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -345,7 +354,7 @@ func (c *TransactionController) GetTransactionReceipt(ctx *gin.Context) {
 
 // ExportTransactions exports transaction history as CSV
 func (c *TransactionController) ExportTransactions(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -399,7 +408,7 @@ func (c *TransactionController) ExportTransactions(ctx *gin.Context) {
 
 // GetMonthlyTransactionSummary retrieves monthly transaction summary
 func (c *TransactionController) GetMonthlyTransactionSummary(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -439,7 +448,7 @@ func (c *TransactionController) GetMonthlyTransactionSummary(ctx *gin.Context) {
 
 // GetDailyTransactionSummary retrieves daily transaction summary
 func (c *TransactionController) GetDailyTransactionSummary(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -471,7 +480,7 @@ func (c *TransactionController) GetDailyTransactionSummary(ctx *gin.Context) {
 
 // GetTransactionTrends retrieves transaction trends and patterns
 func (c *TransactionController) GetTransactionTrends(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
@@ -540,7 +549,7 @@ func (c *TransactionController) ValidateTransaction(ctx *gin.Context) {
 
 // RetryFailedTransaction retries a failed transaction
 func (c *TransactionController) RetryFailedTransaction(ctx *gin.Context) {
-	userID := ctx.GetString("userID")
+	userID := ctx.GetString("user_id")
 	if userID == "" {
 		utils.UnauthorizedResponse(ctx, "User not authenticated")
 		return
