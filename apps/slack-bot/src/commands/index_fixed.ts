@@ -1,5 +1,5 @@
 import { App, SlackCommandMiddlewareArgs, SlackActionMiddlewareArgs } from '@slack/bolt';
-import { createEnhancedAPIClient, validateTransfer, createTransfer, getWalletBalance } from '../clients/tranza-api';
+import { createAPIClient, validateTransfer, createTransfer, getWalletBalance } from '../clients/tranza-api';
 import { getUserSession, authenticateUser, logoutUser } from '../services/user-session';
 
 // Command: /auth - Authenticate user with API key
@@ -52,7 +52,7 @@ export const handleFetchBalanceCommand = async ({ command, ack, respond }: Slack
     }
 
     // Get wallet balance
-    const client = createEnhancedAPIClient({
+    const client = createAPIClient({
       baseURL: process.env['TRANZA_API_BASE_URL'] || 'http://localhost:8080',
       apiKey: session.apiKey,
     });
@@ -112,7 +112,7 @@ export const handleSendMoneyCommand = async ({ command, ack, respond }: SlackCom
     }
 
     // Create API client
-    const client = createEnhancedAPIClient({
+    const client = createAPIClient({
       baseURL: process.env['TRANZA_API_BASE_URL'] || 'http://localhost:8080',
       apiKey: session.apiKey,
     });
@@ -213,7 +213,7 @@ export const handleConfirmTransfer = async ({ ack, body, respond }: SlackActionM
     const { amount, recipientType, recipient } = JSON.parse(buttonValue);
 
     // Create API client
-    const client = createEnhancedAPIClient({
+    const client = createAPIClient({
       baseURL: process.env['TRANZA_API_BASE_URL'] || 'http://localhost:8080',
       apiKey: session.apiKey,
     });
