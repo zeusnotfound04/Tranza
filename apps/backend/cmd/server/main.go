@@ -26,8 +26,10 @@ func main() {
 		&models.EmailVerification{},
 		&models.Transaction{},
 		&models.APIKey{},
+		&models.APIUsageLog{}, // Added API usage logging table
 		&models.LinkedCard{},
 		&models.Wallet{},
+		&models.Address{}, // Added address management table
 		&models.AIPaymentRequest{},
 		&models.AISpendingLimit{},
 		&models.AISpendingTracker{},

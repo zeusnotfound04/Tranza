@@ -22,6 +22,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	txnRepo := repositories.NewTransactionRepository(db)
 	walletRepo := repositories.NewWalletRepository(db)
 	apiKeyRepo := repositories.NewAPIKeyRepository(db)
+	apiUsageLogRepo := repositories.NewAPIUsageLogRepository(db)
 	addressRepo := repositories.NewAddressRepository(db)
 	externalTransferRepo := repositories.NewExternalTransferRepository(db)
 
@@ -46,18 +47,19 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	transactionService := services.NewTransactionService(txnRepo, walletRepo, paymentService)
 	razorpayService := services.NewRazorpayService()
 	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
+	apiUsageLogService := services.NewAPIUsageLogService(apiUsageLogRepo, apiKeyRepo)
 	aiService := services.NewAIService(db, os.Getenv("GEMINI_API_KEY"))
 	addressService := services.NewAddressService(addressRepo)
 	externalTransferService := services.NewExternalTransferService(db, externalTransferRepo, walletRepo, txnRepo, razorpayClient, notificationService)
 	// clothingService := services.NewClothingService(addressRepo, walletRepo, txnRepo, db)
 
-	// Initialize controllers
+    // Initialize controllers
 	authController := controllers.NewAuthController(authService, emailVerificationService)
 	cardController := controllers.NewCardController(cardService)
 	walletController := controllers.NewWalletHandler(walletService)
 	transactionController := controllers.NewTransactionController(transactionService, paymentService)
 	paymentController := controllers.NewPaymentController(razorpayService)
-	apiKeyController := controllers.NewAPIKeyController(apiKeyService)
+	apiKeyController := controllers.NewAPIKeyController(apiKeyService, apiUsageLogService)
 	aiController := controllers.NewAIController(aiService, walletService, paymentService)
 	addressController := controllers.NewAddressController(addressService)
 	externalTransferController := controllers.NewExternalTransferController(externalTransferService, walletService)
@@ -113,7 +115,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// API v1 Routes (Protected)
 	// ======================
 	api := r.Group("/api/v1")
-	api.Use(authController.AuthMiddleware()) // Apply JWT auth to all API routes
+	api.Use(middlewares.JWTAuthMiddleware()) // Apply JWT auth to all API routes
 	fmt.Printf("DEBUG: Setting up API v1 routes with auth middleware\n")
 
 	// ======================
@@ -244,7 +246,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 		// AI Spending Limits Management
 		ai.GET("/limits", aiController.GetSpendingLimits)    // Get user's AI spending limits
 		ai.PUT("/limits", aiController.UpdateSpendingLimits) // Update user's AI spending limits
-		
+
 		// AI Clothing Order Processing
 		// ai.POST("/clothing/order", clothingController.ProcessAIClothingOrder)   // Process AI clothing order request
 		// ai.POST("/clothing/confirm", clothingController.ConfirmAIClothingOrder) // Confirm AI clothing order
@@ -282,12 +284,17 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// ======================
 	keys := api.Group("/keys")
 	{
-		keys.POST("", apiKeyController.CreateAPIKey)            // Create new API key
-		keys.POST("/bot", apiKeyController.CreateBotAPIKey)     // Create bot API key
-		keys.GET("", apiKeyController.GetAPIKeys)               // List all user's API keys
-		keys.GET("/:id/usage", apiKeyController.GetAPIKeyUsage) // Get API key usage stats
-		keys.POST("/:id/rotate", apiKeyController.RotateAPIKey) // Rotate API key
-		keys.DELETE("/:id", apiKeyController.RevokeAPIKey)      // Revoke API key
+		keys.POST("", apiKeyController.CreateAPIKey)                        // Create new API key
+		keys.POST("/bot", apiKeyController.CreateBotAPIKey)                 // Create bot API key
+		keys.GET("", apiKeyController.GetAPIKeys)                           // List all user's API keys
+		keys.GET("/:id/usage", apiKeyController.GetAPIKeyUsage)             // Get API key usage stats
+		keys.GET("/:id/usage/detailed", apiKeyController.GetDetailedUsageStats) // Get detailed usage statistics
+		keys.GET("/:id/logs", apiKeyController.GetUsageLogs)                // Get paginated usage logs
+		keys.GET("/:id/usage/timeseries", apiKeyController.GetTimeSeriesData)   // Get time-series usage data
+		keys.GET("/:id/usage/commands", apiKeyController.GetCommandData)    // Get command-specific usage data
+		keys.POST("/:id/rotate", apiKeyController.RotateAPIKey)             // Rotate API key
+		keys.POST("/:id/view", apiKeyController.ViewAPIKey)                 // View API key with password
+		keys.DELETE("/:id", apiKeyController.RevokeAPIKey)                  // Revoke API key
 	}
 
 	// ======================
@@ -313,6 +320,32 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// These routes are already defined in the AI group above:
 	// ai.POST("/clothing/order", clothingController.ProcessAIClothingOrder)
 	// ai.POST("/clothing/confirm", clothingController.ConfirmAIClothingOrder)
+
+	// ======================
+	// Debug Routes (Temporary)
+	// ======================
+	debug := r.Group("/debug")
+	{
+		debug.GET("/api-keys", func(ctx *gin.Context) {
+			var apiKeys []map[string]interface{}
+			result := db.Table("api_keys").Select("id, user_id, key_hash, label, key_type, is_active, created_at").Find(&apiKeys)
+			if result.Error != nil {
+				ctx.JSON(500, gin.H{"error": result.Error.Error()})
+				return
+			}
+			ctx.JSON(200, gin.H{"api_keys": apiKeys, "count": len(apiKeys)})
+		})
+		debug.GET("/api-keys/hash/:hash", func(ctx *gin.Context) {
+			hash := ctx.Param("hash")
+			var apiKey map[string]interface{}
+			result := db.Table("api_keys").Where("key_hash = ? AND is_active = ?", hash, true).First(&apiKey)
+			if result.Error != nil {
+				ctx.JSON(404, gin.H{"error": result.Error.Error(), "hash": hash})
+				return
+			}
+			ctx.JSON(200, gin.H{"api_key": apiKey})
+		})
+	}
 
 	// ======================
 	// Admin Routes (Future Implementation)

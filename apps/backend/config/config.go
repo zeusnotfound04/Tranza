@@ -41,11 +41,18 @@ type Config struct {
 }
 
 func LoadEnv() {
+	fmt.Printf("🔧 Loading .env file...\n")
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Println("No .env file found")
+		log.Printf("❌ No .env file found or error loading: %v\n", err)
+	} else {
+		log.Printf("✅ .env file loaded successfully\n")
 	}
+
+	// Debug: Print JWT_SECRET
+	jwtSecret := os.Getenv("JWT_SECRET")
+	fmt.Printf("🔑 JWT_SECRET from env: '%s' (length: %d)\n", jwtSecret, len(jwtSecret))
 }
 
 func ConnectDB() *gorm.DB {

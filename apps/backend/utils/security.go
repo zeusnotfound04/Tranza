@@ -49,7 +49,7 @@ func GenerateJWT(userId, email, username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString([]byte(GetJWTSecret()))
 }
 
 // JWTService implementation methods
@@ -244,8 +244,6 @@ func ValidatePaymentID(paymentID string) bool {
 	return true
 }
 
-
-
 // ValidateCurrency checks if the currency code is supported
 func ValidateCurrency(currency string) bool {
 	supportedCurrencies := map[string]bool{
@@ -307,4 +305,35 @@ func HashPassword(password string) (string, error) {
 func VerifyPassword(password, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
+}
+
+// EncryptAPIKey encrypts an API key using AES with a password-derived key
+func EncryptAPIKey(apiKey, password string) (string, error) {
+	// Create a simple XOR encryption using password hash as key
+	passwordHash := sha256.Sum256([]byte(password))
+
+	encrypted := make([]byte, len(apiKey))
+	for i := range apiKey {
+		encrypted[i] = apiKey[i] ^ passwordHash[i%len(passwordHash)]
+	}
+
+	return hex.EncodeToString(encrypted), nil
+}
+
+// DecryptAPIKey decrypts an API key using the password
+func DecryptAPIKey(encryptedKey, password string) (string, error) {
+	encrypted, err := hex.DecodeString(encryptedKey)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the same XOR decryption
+	passwordHash := sha256.Sum256([]byte(password))
+
+	decrypted := make([]byte, len(encrypted))
+	for i := range encrypted {
+		decrypted[i] = encrypted[i] ^ passwordHash[i%len(passwordHash)]
+	}
+
+	return string(decrypted), nil
 }

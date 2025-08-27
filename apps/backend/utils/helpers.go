@@ -19,6 +19,33 @@ func ParseUUID(uuidStr string) (uuid.UUID, error) {
 	return uuid.Parse(uuidStr)
 }
 
+// GetUserIDFromContext extracts and converts user_id from gin context to UUID
+func GetUserIDFromContext(ctx *gin.Context) (uuid.UUID, error) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		return uuid.Nil, fmt.Errorf("user not authenticated")
+	}
+
+	// Handle both UUID and string types for backward compatibility
+	switch v := userID.(type) {
+	case uuid.UUID:
+		return v, nil
+	case string:
+		return uuid.Parse(v)
+	default:
+		return uuid.Nil, fmt.Errorf("invalid user ID type: %T", userID)
+	}
+}
+
+// GetUserIDStringFromContext extracts user_id from gin context as string
+func GetUserIDStringFromContext(ctx *gin.Context) (string, error) {
+	userUUID, err := GetUserIDFromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	return userUUID.String(), nil
+}
+
 // FormatAmount formats decimal amount to string with 2 decimal places
 func FormatAmount(amount decimal.Decimal) string {
 	return fmt.Sprintf("₹%.2f", amount)
